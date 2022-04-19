@@ -2,14 +2,20 @@
 
 import math as pm
 import warnings
+from typing import Union, Dict, Callable
+
+import jax.numpy as jnp
+import numpy as np
 
 import brainpy.math as bm
 from brainpy import tools
 from brainpy.base.base import Base
 from brainpy.base.collector import Collector
-from brainpy.errors import ModelBuildError
 from brainpy.connect import TwoEndConnector, MatConn, IJConn
+from brainpy.initialize import Initializer, ZeroInit, init_param
+from brainpy.errors import ModelBuildError
 from brainpy.integrators.base import Integrator
+from brainpy.types import Tensor
 
 __all__ = [
   'DynamicalSystem',
@@ -71,82 +77,6 @@ class DynamicalSystem(Base):
           gather[f'{node_path}.{k}' if node_path else k] = v
     return gather
 
-  def child_ds(self, method='absolute', include_self=False):
-    """Return the children instance of dynamical systems.
-
-    This is a shortcut function to get all children dynamical system
-    in this object. For example:
-
-    >>> import brainpy as bp
-    >>>
-    >>> class Net(bp.DynamicalSystem):
-    >>>   def __init__(self, **kwargs):
-    >>>     super(Net, self).__init__(**kwargs)
-    >>>     self.A = bp.NeuGroup(10)
-    >>>     self.B = bp.NeuGroup(20)
-    >>>
-    >>>   def update(self, _t, _dt):
-    >>>     for node in self.child_ds().values():
-    >>>        node.update(_t, _dt)
-    >>>
-    >>> net = Net()
-    >>> net.child_ds()
-    {'NeuGroup0': <brainpy.simulation.brainobjects.neuron.NeuGroup object at 0x000001ABD4FF02B0>,
-    'NeuGroup1': <brainpy.simulation.brainobjects.neuron.NeuGroup object at 0x000001ABD74E5670>}
-
-    Parameters
-    ----------
-    method : str
-      The method to access the children nodes.
-    include_self : bool
-      Whether include the self dynamical system.
-
-    Returns
-    -------
-    collector: Collector
-      A Collector includes all children systems.
-    """
-    nodes = self.nodes(method=method).subset(DynamicalSystem).unique()
-    if not include_self:
-      if method == 'absolute':
-        nodes.pop(self.name)
-      elif method == 'relative':
-        nodes.pop('')
-      else:
-        raise ValueError(f'Unknown access method: {method}')
-    return nodes
-
-  def register_constant_delay(self, key, size, delay, dtype=None):
-    """Register a constant delay, whose update method will be appended into
-    the ``self.steps`` in this host class.
-
-    Parameters
-    ----------
-    key : str
-      The delay name.
-    size : int, list of int, tuple of int
-      The delay data size.
-    delay : int, float, ndarray
-      The delay time, with the unit same with `brainpy.math.get_dt()`.
-    dtype : optional
-      The data type.
-
-    Returns
-    -------
-    delay : ConstantDelay
-        An instance of ConstantDelay.
-    """
-    if not hasattr(self, 'steps'):
-      raise ModelBuildError('Please initialize the super class first before '
-                            'registering constant_delay. \n\n'
-                            'super(YourClassName, self).__init__(**kwargs)')
-    if not key.isidentifier(): raise ValueError(f'{key} is not a valid identifier.')
-    cdelay = ConstantDelay(size=size,
-                           delay=delay,
-                           name=f'{self.name}_delay_{key}',
-                           dtype=dtype)
-    return cdelay
-
   def __call__(self, *args, **kwargs):
     """The shortcut to call ``update`` methods."""
     return self.update(*args, **kwargs)
@@ -202,7 +132,8 @@ class Container(DynamicalSystem):
     In this update function, the update functions in children systems are
     iteratively called.
     """
-    for node in self.child_ds().values():
+    nodes = self.nodes(level=1, include_self=False).subset(DynamicalSystem).unique()
+    for node in nodes.values():
       node.update(_t, _dt)
 
   def __getattr__(self, item):
@@ -401,13 +332,26 @@ class TwoEndConn(DynamicalSystem):
       Pre-synaptic neuron group.
   post : NeuGroup
       Post-synaptic neuron group.
-  conn : optional, math.ndarray, dict of (str, math.ndarray), TwoEndConnector
+  conn : optional, ndarray, JaxArray, dict, TwoEndConnector
       The connection method between pre- and post-synaptic groups.
   name : str, optional
       The name of the dynamic system.
   """
 
-  def __init__(self, pre, post, conn=None, name=None):
+  """Global delay variables. Useful when the same target
+    variable is used in multiple mappings."""
+  global_delay_vars: Dict[str, bm.LengthDelay] = dict()
+
+  def __init__(
+      self,
+      pre: NeuGroup,
+      post: NeuGroup,
+      conn: Union[TwoEndConnector, Tensor, Dict[str, Tensor]] = None,
+      name: str = None
+  ):
+    # local delay variables
+    self.local_delay_vars: Dict[str, bm.LengthDelay] = dict()
+
     # pre or post neuron group
     # ------------------------
     if not isinstance(pre, NeuGroup):
@@ -421,7 +365,7 @@ class TwoEndConn(DynamicalSystem):
     # ------------
     if isinstance(conn, TwoEndConnector):
       self.conn = conn(pre.size, post.size)
-    elif isinstance(conn, bm.ndarray):
+    elif isinstance(conn, (bm.ndarray, np.ndarray, jnp.ndarray)):
       if (pre.num, post.num) != conn.shape:
         raise ModelBuildError(f'"conn" is provided as a matrix, and it is expected '
                               f'to be an array with shape of (pre.num, post.num) = '
@@ -433,8 +377,10 @@ class TwoEndConn(DynamicalSystem):
                               f'be a dictionary with "i" and "j" specification, '
                               f'however we got {conn}')
       self.conn = IJConn(i=conn['i'], j=conn['j'])
-    elif conn is None:
+    elif isinstance(conn, str):
       self.conn = conn
+    elif conn is None:
+      self.conn = None
     else:
       raise ModelBuildError(f'Unknown "conn" type: {conn}')
 
@@ -461,3 +407,125 @@ class TwoEndConn(DynamicalSystem):
         raise ValueError(f'Must be string. But got {attr}.')
       if not hasattr(self.post, attr):
         raise ModelBuildError(f'{self} need "pre" neuron group has attribute "{attr}".')
+
+  def register_delay(
+      self,
+      name: str,
+      delay_step: Union[int, bm.ndarray, jnp.ndarray, Callable, Initializer],
+      delay_target: Union[bm.JaxArray, jnp.ndarray],
+      initial_delay_data: Union[Initializer, Callable] = None,
+      domain: str = 'global'
+  ):
+    """Register delay variable.
+
+    Parameters
+    ----------
+    name: str
+      The delay variable name.
+    delay_step: int, JaxArray, ndarray, callable, Initializer
+      The number of the steps of the delay.
+    delay_target: JaxArray, ndarray, Variable
+      The target for delay.
+    initial_delay_data: float, int, JaxArray, ndarray, callable, Initializer
+      The initializer for the delay data.
+    domain: str
+      The domain of the delay data to store.
+
+    Returns
+    -------
+    delay_step: int, JaxArray, ndarray
+      The number of the delay steps.
+    """
+    # delay steps
+    if delay_step is None:
+      return delay_step
+    elif isinstance(delay_step, int):
+      delay_type = 'homo'
+    elif isinstance(delay_step, (bm.ndarray, jnp.ndarray, np.ndarray)):
+      delay_type = 'heter'
+      delay_step = bm.asarray(delay_step)
+    elif callable(delay_step):
+      delay_step = init_param(delay_step, delay_target.shape, allow_none=False)
+      delay_type = 'heter'
+    else:
+      raise ValueError(f'Unknown "delay_steps" type {type(delay_step)}, only support '
+                       f'integer, array of integers, callable function, brainpy.init.Initializer.')
+    if delay_type == 'heter':
+      if delay_step.dtype not in [bm.int32, bm.int64]:
+        raise ValueError('Only support delay steps of int32, int64. If your '
+                         'provide delay time length, please divide the "dt" '
+                         'then provide us the number of delay steps.')
+      if delay_target.shape[0] != delay_step.shape[0]:
+        raise ValueError(f'Shape is mismatched: {delay_target.shape[0]} != {delay_step.shape[0]}')
+    max_delay_step = int(bm.max(delay_step))
+
+    # delay domain
+    if domain not in ['global', 'local']:
+      raise ValueError('"domain" must be a string in ["global", "local"]. '
+                       f'Bug we got {domain}.')
+
+    # delay variable
+    if domain == 'local':
+      self.local_delay_vars[name] = bm.LengthDelay(delay_target, max_delay_step, initial_delay_data)
+      self.register_implicit_nodes(self.local_delay_vars)
+    else:
+      if name not in self.global_delay_vars:
+        self.global_delay_vars[name] = bm.LengthDelay(delay_target, max_delay_step, initial_delay_data)
+        # save into local delay vars when first seen "var",
+        # for later update current value!
+        self.local_delay_vars[name] = self.global_delay_vars[name]
+      else:
+        if self.global_delay_vars[name].num_delay_step - 1 < max_delay_step:
+          self.global_delay_vars[name].init(delay_target, max_delay_step, initial_delay_data)
+      self.register_implicit_nodes(self.global_delay_vars)
+    return delay_step
+
+  def get_delay(
+      self,
+      name: str,
+      delay_step: Union[int, bm.JaxArray, bm.ndarray],
+      indices=None,
+  ):
+    """Get delay data according to the provided delay steps.
+
+    Parameters
+    ----------
+    name: str
+      The delay variable name.
+    delay_step: int, JaxArray, ndarray
+      The delay length.
+    indices: optional, JaxArray, ndarray
+      The indices of the delay.
+
+    Returns
+    -------
+    delay_data: JaxArray, ndarray
+      The delay data at the given time.
+    """
+    if name in self.global_delay_vars:
+      if isinstance(delay_step, int):
+        return self.global_delay_vars[name](delay_step, indices)
+      else:
+        if indices is None:
+          indices = jnp.arange(delay_step.size)
+        return self.global_delay_vars[name](delay_step, indices)
+    elif name in self.local_delay_vars:
+      if isinstance(delay_step, int):
+        return self.local_delay_vars[name](delay_step)
+      else:
+        if indices is None:
+          indices = jnp.arange(delay_step.size)
+        return self.local_delay_vars[name](delay_step, indices)
+    else:
+      raise ValueError(f'{name} is not defined in delay variables.')
+
+  def update_delay(
+      self,
+      name: str,
+      delay_target: Union[int, bm.JaxArray, bm.ndarray]
+  ):
+    if name in self.local_delay_vars:
+      return self.local_delay_vars[name].update(delay_target)
+    else:
+      if name not in self.global_delay_vars:
+        raise ValueError(f'{name} is not defined in delay variables.')
