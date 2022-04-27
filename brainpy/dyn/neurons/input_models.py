@@ -64,10 +64,12 @@ class SpikeTimeGroup(NeuGroup):
     self.num_times = len(times)
 
     # data about times and indices
-    self.i = bm.Variable(jnp.zeros(1, dtype=bm.int_))
-    self.times = bm.Variable(jnp.asarray(times, dtype=bm.float_))
-    self.indices = bm.Variable(jnp.asarray(indices, dtype=bm.int_))
-    self.spike = bm.Variable(jnp.zeros(self.num, dtype=bool))
+    self.times = bm.asarray(times, dtype=bm.float_)
+    self.indices = bm.asarray(indices, dtype=bm.int_)
+
+    # variables
+    self.i = bm.Variable(bm.zeros(1, dtype=bm.int_))
+    self.spike = bm.Variable(bm.zeros(self.num, dtype=bool))
     if need_sort:
       sort_idx = bm.argsort(self.times)
       self.indices.value = self.indices[sort_idx]
@@ -82,6 +84,10 @@ class SpikeTimeGroup(NeuGroup):
       self.i[0] += 1
 
     self._run = bm.make_while(cond_fun, body_fun, dyn_vars=self.vars())
+
+  def reset(self):
+    self.i[0] = 1
+    self.spike[:] = False
 
   def update(self, _t, _i, **kwargs):
     self.spike[:] = False
@@ -118,16 +124,25 @@ class PoissonGroup(NeuGroup):
   ):
     super(PoissonGroup, self).__init__(size=size, name=name)
 
+    # parameters
+    self.seed = seed
     self.freqs = init_param(freqs, self.num, allow_none=False)
     self.dt = bm.get_dt() / 1000.
     self.size = (size,) if isinstance(size, int) else tuple(size)
-    self.spike = bm.Variable(jnp.zeros(self.num, dtype=bool))
-    self.t_last_spike = bm.Variable(jnp.ones(self.num) * -1e7)
+
+    # variables
+    self.spike = bm.Variable(bm.zeros(self.num, dtype=bool))
+    self.t_last_spike = bm.Variable(bm.ones(self.num) * -1e7)
     self.rng = bm.random.RandomState(seed=seed)
 
   def update(self, _t, _i):
     self.spike.update(self.rng.random(self.num) <= self.freqs * self.dt)
     self.t_last_spike.update(bm.where(self.spike, _t, self.t_last_spike))
+
+  def reset(self):
+    self.spike[:] = False
+    self.t_last_spike[:] = -1e7
+    self.rng.seed(self.seed)
 
 
 def PoissonInput(*args, **kwargs):
