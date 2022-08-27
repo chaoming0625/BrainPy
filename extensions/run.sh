@@ -1,4 +1,8 @@
 rm -rf build
 pip uninstall brainpylib -y
 python setup_cuda.py bdist_wheel
-pip install dist/brainpylib-0.0.3+cuda115-cp39-cp39-linux_x86_64.whl
+pip install dist/brainpylib-0.0.6-cp38-cp38-linux_x86_64.whl
+mv /home/adadu/miniconda3/envs/py38/lib/python3.8/site-packages/brainpylib/gpu_ops.cpython-38-x86_64-linux-gnu.so /home/adadu/miniconda3/envs/py38/lib/python3.8/site-packages/brainpylib/gpu_ops.so
+cd ..
+python a.py
+

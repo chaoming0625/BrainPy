@@ -625,19 +625,19 @@ namespace brainpy_lib {
         gpu_event_sum_homo<float, std::uint64_t>(stream, buffers, opaque, opaque_len);
     }
 
-    void gpu_event_sum_homo_f64_i32(cudaStream_t stream,
-                                    void **buffers,
-                                    const char *opaque,
-                                    std::size_t opaque_len) {
-        gpu_event_sum_homo<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
-    }
-
-    void gpu_event_sum_homo_f64_i64(cudaStream_t stream,
-                                    void **buffers,
-                                    const char *opaque,
-                                    std::size_t opaque_len) {
-        gpu_event_sum_homo<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
-    }
+//     void gpu_event_sum_homo_f64_i32(cudaStream_t stream,
+//                                     void **buffers,
+//                                     const char *opaque,
+//                                     std::size_t opaque_len) {
+//         gpu_event_sum_homo<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
+//     }
+//
+//     void gpu_event_sum_homo_f64_i64(cudaStream_t stream,
+//                                     void **buffers,
+//                                     const char *opaque,
+//                                     std::size_t opaque_len) {
+//         gpu_event_sum_homo<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
+//     }
 
     // heterogeneous event sum 1
     void gpu_event_sum_heter_f32_i32(cudaStream_t stream,
@@ -654,19 +654,19 @@ namespace brainpy_lib {
         gpu_event_sum_heter<float, std::uint64_t>(stream, buffers, opaque, opaque_len);
     }
 
-    void gpu_event_sum_heter_f64_i32(cudaStream_t stream,
-                                     void **buffers,
-                                     const char *opaque,
-                                     std::size_t opaque_len) {
-        gpu_event_sum_heter<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
-    }
-
-    void gpu_event_sum_heter_f64_i64(cudaStream_t stream,
-                                     void **buffers,
-                                     const char *opaque,
-                                     std::size_t opaque_len) {
-        gpu_event_sum_heter<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
-    }
+//     void gpu_event_sum_heter_f64_i32(cudaStream_t stream,
+//                                      void **buffers,
+//                                      const char *opaque,
+//                                      std::size_t opaque_len) {
+//         gpu_event_sum_heter<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
+//     }
+//
+//     void gpu_event_sum_heter_f64_i64(cudaStream_t stream,
+//                                      void **buffers,
+//                                      const char *opaque,
+//                                      std::size_t opaque_len) {
+//         gpu_event_sum_heter<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
+//     }
 
 
     // homogenous event sum 2
@@ -684,19 +684,19 @@ namespace brainpy_lib {
         gpu_event_sum2_homo<float, std::uint64_t>(stream, buffers, opaque, opaque_len);
     }
 
-    void gpu_event_sum2_homo_f64_i32(cudaStream_t stream,
-                                     void **buffers,
-                                     const char *opaque,
-                                     std::size_t opaque_len) {
-        gpu_event_sum2_homo<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
-    }
-
-    void gpu_event_sum2_homo_f64_i64(cudaStream_t stream,
-                                     void **buffers,
-                                     const char *opaque,
-                                     std::size_t opaque_len) {
-        gpu_event_sum2_homo<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
-    }
+//     void gpu_event_sum2_homo_f64_i32(cudaStream_t stream,
+//                                      void **buffers,
+//                                      const char *opaque,
+//                                      std::size_t opaque_len) {
+//         gpu_event_sum2_homo<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
+//     }
+//
+//     void gpu_event_sum2_homo_f64_i64(cudaStream_t stream,
+//                                      void **buffers,
+//                                      const char *opaque,
+//                                      std::size_t opaque_len) {
+//         gpu_event_sum2_homo<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
+//     }
 
     // heterogeneous event sum 2
     void gpu_event_sum2_heter_f32_i32(cudaStream_t stream,
@@ -713,19 +713,19 @@ namespace brainpy_lib {
         gpu_event_sum2_heter<float, std::uint64_t>(stream, buffers, opaque, opaque_len);
     }
 
-    void gpu_event_sum2_heter_f64_i32(cudaStream_t stream,
-                                      void **buffers,
-                                      const char *opaque,
-                                      std::size_t opaque_len) {
-        gpu_event_sum2_heter<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
-    }
-
-    void gpu_event_sum2_heter_f64_i64(cudaStream_t stream,
-                                      void **buffers,
-                                      const char *opaque,
-                                      std::size_t opaque_len) {
-        gpu_event_sum2_heter<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
-    }
+//     void gpu_event_sum2_heter_f64_i32(cudaStream_t stream,
+//                                       void **buffers,
+//                                       const char *opaque,
+//                                       std::size_t opaque_len) {
+//         gpu_event_sum2_heter<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
+//     }
+//
+//     void gpu_event_sum2_heter_f64_i64(cudaStream_t stream,
+//                                       void **buffers,
+//                                       const char *opaque,
+//                                       std::size_t opaque_len) {
+//         gpu_event_sum2_heter<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
+//     }
 
 
     // homogenous event sum 3
@@ -743,19 +743,19 @@ namespace brainpy_lib {
         gpu_event_sum3_homo<float, std::uint64_t>(stream, buffers, opaque, opaque_len);
     }
 
-    void gpu_event_sum3_homo_f64_i32(cudaStream_t stream,
-                                     void **buffers,
-                                     const char *opaque,
-                                     std::size_t opaque_len) {
-        gpu_event_sum3_homo<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
-    }
-
-    void gpu_event_sum3_homo_f64_i64(cudaStream_t stream,
-                                     void **buffers,
-                                     const char *opaque,
-                                     std::size_t opaque_len) {
-        gpu_event_sum3_homo<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
-    }
+//     void gpu_event_sum3_homo_f64_i32(cudaStream_t stream,
+//                                      void **buffers,
+//                                      const char *opaque,
+//                                      std::size_t opaque_len) {
+//         gpu_event_sum3_homo<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
+//     }
+//
+//     void gpu_event_sum3_homo_f64_i64(cudaStream_t stream,
+//                                      void **buffers,
+//                                      const char *opaque,
+//                                      std::size_t opaque_len) {
+//         gpu_event_sum3_homo<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
+//     }
 
     // heterogeneous event sum 3
     void gpu_event_sum3_heter_f32_i32(cudaStream_t stream,
@@ -772,19 +772,19 @@ namespace brainpy_lib {
         gpu_event_sum3_heter<float, std::uint64_t>(stream, buffers, opaque, opaque_len);
     }
 
-    void gpu_event_sum3_heter_f64_i32(cudaStream_t stream,
-                                      void **buffers,
-                                      const char *opaque,
-                                      std::size_t opaque_len) {
-        gpu_event_sum3_heter<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
-    }
-
-    void gpu_event_sum3_heter_f64_i64(cudaStream_t stream,
-                                      void **buffers,
-                                      const char *opaque,
-                                      std::size_t opaque_len) {
-        gpu_event_sum3_heter<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
-    }
+//     void gpu_event_sum3_heter_f64_i32(cudaStream_t stream,
+//                                       void **buffers,
+//                                       const char *opaque,
+//                                       std::size_t opaque_len) {
+//         gpu_event_sum3_heter<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
+//     }
+//
+//     void gpu_event_sum3_heter_f64_i64(cudaStream_t stream,
+//                                       void **buffers,
+//                                       const char *opaque,
+//                                       std::size_t opaque_len) {
+//         gpu_event_sum3_heter<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
+//     }
 
 
     // homogenous event sum 3
@@ -802,19 +802,19 @@ namespace brainpy_lib {
         gpu_event_sum4_homo<float, std::uint64_t>(stream, buffers, opaque, opaque_len);
     }
 
-    void gpu_event_sum4_homo_f64_i32(cudaStream_t stream,
-                                     void **buffers,
-                                     const char *opaque,
-                                     std::size_t opaque_len) {
-        gpu_event_sum4_homo<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
-    }
-
-    void gpu_event_sum4_homo_f64_i64(cudaStream_t stream,
-                                     void **buffers,
-                                     const char *opaque,
-                                     std::size_t opaque_len) {
-        gpu_event_sum4_homo<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
-    }
+//     void gpu_event_sum4_homo_f64_i32(cudaStream_t stream,
+//                                      void **buffers,
+//                                      const char *opaque,
+//                                      std::size_t opaque_len) {
+//         gpu_event_sum4_homo<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
+//     }
+//
+//     void gpu_event_sum4_homo_f64_i64(cudaStream_t stream,
+//                                      void **buffers,
+//                                      const char *opaque,
+//                                      std::size_t opaque_len) {
+//         gpu_event_sum4_homo<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
+//     }
 
     // heterogeneous event sum 3
     void gpu_event_sum4_heter_f32_i32(cudaStream_t stream,
@@ -831,19 +831,19 @@ namespace brainpy_lib {
         gpu_event_sum4_heter<float, std::uint64_t>(stream, buffers, opaque, opaque_len);
     }
 
-    void gpu_event_sum4_heter_f64_i32(cudaStream_t stream,
-                                      void **buffers,
-                                      const char *opaque,
-                                      std::size_t opaque_len) {
-        gpu_event_sum4_heter<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
-    }
+//     void gpu_event_sum4_heter_f64_i32(cudaStream_t stream,
+//                                       void **buffers,
+//                                       const char *opaque,
+//                                       std::size_t opaque_len) {
+//         gpu_event_sum4_heter<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
+//     }
 
-    void gpu_event_sum4_heter_f64_i64(cudaStream_t stream,
-                                      void **buffers,
-                                      const char *opaque,
-                                      std::size_t opaque_len) {
-        gpu_event_sum4_heter<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
-    }
+//     void gpu_event_sum4_heter_f64_i64(cudaStream_t stream,
+//                                       void **buffers,
+//                                       const char *opaque,
+//                                       std::size_t opaque_len) {
+//         gpu_event_sum4_heter<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
+//     }
 
 
 }  // namespace brainpylib

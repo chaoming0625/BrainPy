@@ -13,6 +13,7 @@ from jax import core
 from jax.interpreters import xla, batching
 from jax.lib import xla_client
 from jax.lax import scan
+from jax.abstract_arrays import ShapedArray
 
 try:
   from . import gpu_ops
@@ -48,24 +49,23 @@ def event_sum(events, pre2post, post_num, values):
   if values.size not in [1, indices.size]:
     raise ValueError(f'The size of "values" must be 1 (a scalar) or len(pre2post[0]) (a vector), '
                      f'while we got {values.size} != 1 != {indices.size}')
-  out = jnp.zeros(post_num, dtype=values.dtype)
   values = values.flatten()
   # bind operator
-  return _event_sum_prim.bind(events, indices, indptr, values, out)
+  return _event_sum_prim.bind(events, indices, indptr, values, post_size=post_num)
 
 
-def _event_sum_abstract(events, indices, indptr, values, out):
-  return out
+def _event_sum_abstract(events, indices, indptr, values, *, post_size):
+  return ShapedArray(shape=(post_size,), dtype=values.dtype)
 
 
 _event_sum_prim.def_abstract_eval(_event_sum_abstract)
 _event_sum_prim.def_impl(partial(xla.apply_primitive, _event_sum_prim))
 
 
-def _event_sum_translation(c, events, indices, indptr, values, out, *, platform="cpu"):
+def _event_sum_translation(c, events, indices, indptr, values, *, post_size, platform="cpu"):
   # The pre/post shape
   pre_size = np.array(c.get_shape(events).dimensions()[0], dtype=np.uint32)
-  post_size = np.array(c.get_shape(out).dimensions()[0], dtype=np.uint32)
+  # post_size = np.array(c.get_shape(out).dimensions()[0], dtype=np.uint32)
   _pre_shape = x_shape(np.dtype(np.uint32), (), ())
   _post_shape = x_shape(np.dtype(np.uint32), (), ())
 
@@ -102,7 +102,9 @@ def _event_sum_translation(c, events, indices, indptr, values, out, *, platform=
                                   c.get_shape(indices),
                                   c.get_shape(indptr),
                                   c.get_shape(values)),
-      shape_with_layout=c.get_shape(out),
+      shape_with_layout=x_shape(np.dtype(Ftype),
+                                (post_size,),
+                                (0,)),
     )
   elif platform == 'gpu':
     if gpu_ops is None:
@@ -120,7 +122,9 @@ def _event_sum_translation(c, events, indices, indptr, values, out, *, platform=
                                   c.get_shape(indices),
                                   c.get_shape(indptr),
                                   c.get_shape(values)),
-      shape_with_layout=c.get_shape(out),
+      shape_with_layout=x_shape(np.dtype(Ftype),
+                                (post_size,),
+                                (0,)),
       opaque=opaque,
     )
 
@@ -145,12 +149,12 @@ def _event_sum_batch(args, axes):
     pars = tuple([(x[f'ax{i}'] if i in batch_axes else non_batch_args[f'ax{i}'])
                   for i in range(len(axes))])
     return 0, _event_sum_prim.bind(*pars)
+
   _, outs = scan(f, 0, batch_args)
   return outs, 0
 
 
 batching.primitive_batchers[_event_sum_prim] = _event_sum_batch
-
 
 # ---------------------------
 # event sum kernel 2
@@ -264,7 +268,6 @@ def _event_sum2_translation(c, events, pre_ids, post_ids, values, out, *, platfo
 
 xla.backend_specific_translations["cpu"][_event_sum2_prim] = partial(_event_sum2_translation, platform="cpu")
 xla.backend_specific_translations["gpu"][_event_sum2_prim] = partial(_event_sum2_translation, platform="gpu")
-
 
 # _event_sum3_prim = core.Primitive("event_sum3")
 #
@@ -468,5 +471,3 @@ xla.backend_specific_translations["gpu"][_event_sum2_prim] = partial(_event_sum2
 #
 # xla.backend_specific_translations["cpu"][_event_sum4_prim] = partial(_event_sum4_translation, platform="cpu")
 # xla.backend_specific_translations["gpu"][_event_sum4_prim] = partial(_event_sum4_translation, platform="gpu")
-
-

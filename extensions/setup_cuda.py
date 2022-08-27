@@ -56,7 +56,7 @@ class CMakeBuildExt(build_ext):
 
     os.makedirs(self.build_temp, exist_ok=True)
     subprocess.check_call(
-      ["cmake", '-DCMAKE_CUDA_FLAGS="-arch=sm_61"', HERE] + cmake_args, cwd=self.build_temp
+      ["cmake", '-DCMAKE_CUDA_FLAGS="-arch=sm_86"', HERE] + cmake_args, cwd=self.build_temp
     )
 
     # Build all the extensions

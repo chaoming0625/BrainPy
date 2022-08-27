@@ -106,19 +106,19 @@ namespace brainpy_lib {
         gpu_atomic_prod_homo<float, std::uint64_t>(stream, buffers, opaque, opaque_len);
     }
 
-    void gpu_atomic_prod_homo_f64_i32(cudaStream_t stream,
-                                     void **buffers,
-                                     const char *opaque,
-                                     std::size_t opaque_len) {
-        gpu_atomic_prod_homo<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
-    }
-
-    void gpu_atomic_prod_homo_f64_i64(cudaStream_t stream,
-                                     void **buffers,
-                                     const char *opaque,
-                                     std::size_t opaque_len) {
-        gpu_atomic_prod_homo<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
-    }
+//     void gpu_atomic_prod_homo_f64_i32(cudaStream_t stream,
+//                                      void **buffers,
+//                                      const char *opaque,
+//                                      std::size_t opaque_len) {
+//         gpu_atomic_prod_homo<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
+//     }
+//
+//     void gpu_atomic_prod_homo_f64_i64(cudaStream_t stream,
+//                                      void **buffers,
+//                                      const char *opaque,
+//                                      std::size_t opaque_len) {
+//         gpu_atomic_prod_homo<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
+//     }
 
 // heterogeneous atomic sum
     void gpu_atomic_prod_heter_f32_i32(cudaStream_t stream,
@@ -135,19 +135,19 @@ namespace brainpy_lib {
         gpu_atomic_prod_heter<float, std::uint64_t>(stream, buffers, opaque, opaque_len);
     }
 
-    void gpu_atomic_prod_heter_f64_i32(cudaStream_t stream,
-                                      void **buffers,
-                                      const char *opaque,
-                                      std::size_t opaque_len) {
-        gpu_atomic_prod_heter<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
-    }
+//     void gpu_atomic_prod_heter_f64_i32(cudaStream_t stream,
+//                                       void **buffers,
+//                                       const char *opaque,
+//                                       std::size_t opaque_len) {
+//         gpu_atomic_prod_heter<double, std::uint32_t>(stream, buffers, opaque, opaque_len);
+//     }
 
-    void gpu_atomic_prod_heter_f64_i64(cudaStream_t stream,
-                                      void **buffers,
-                                      const char *opaque,
-                                      std::size_t opaque_len) {
-        gpu_atomic_prod_heter<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
-    }
+//     void gpu_atomic_prod_heter_f64_i64(cudaStream_t stream,
+//                                       void **buffers,
+//                                       const char *opaque,
+//                                       std::size_t opaque_len) {
+//         gpu_atomic_prod_heter<double, std::uint64_t>(stream, buffers, opaque, opaque_len);
+//     }
 
 
 }  // namespace brainpylib
