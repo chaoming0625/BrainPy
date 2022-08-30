@@ -39,8 +39,8 @@ def vector_matmul_mask(V, L, R, *, seed, p):
 
   # bind operator
   return _vmmm_prim.bind(V,
-                         L.flatten(),
-                         R.flatten(),
+                         L,
+                         R,
                          m=V.shape[0],
                          k=L.shape[1],
                          n=R.shape[1],
