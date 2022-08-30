@@ -9,7 +9,7 @@
 #include "event_sum_gpu.h"
 #include "atomic_sum_gpu.h"
 #include "atomic_prod_gpu.h"
-#include "vmmm.h"
+#include "vmmm_gpu.h"
 
 using namespace brainpy_lib;
 

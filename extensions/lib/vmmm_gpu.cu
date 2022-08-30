@@ -2,7 +2,7 @@
 // and I make no promises about the quality of the code or the choices made therein, but
 // it should get the point across.
 
-#include "matmul.h"
+#include "vmmm_gpu.h"
 #include "curand_kernel.h"
 
 namespace brainpy_lib {
@@ -27,7 +27,7 @@ namespace brainpy_lib {
                 const uint32_t A_ldg_step, // k * sizeof(float)
                 const uint32_t B_ldg_step,
                 const uint32_t seed, // random seed
-                const float p // probability
+                const float prob // probability
         ) {
             // n * sizeof(float) * 8
             __shared__ __align__
@@ -67,7 +67,8 @@ namespace brainpy_lib {
             uint32_t m_idx1 = blockIdx.y * 128 + warp_id / 2 * 32 + mma_tid_y;
             uint32_t n_idx1 = blockIdx.x * 128 + warp_id % 2 * 64 + mma_tid_x;
             curandState state;
-            curand_init(seed, m_idx1 * n + n_idx1, 0, &state);
+//             curand_init(seed, m_idx1 * n + n_idx1, 0, &state);
+            curand_init(seed + m_idx1 * n + n_idx1, 0, 0, &state);
             bool conn[8][8];
 #pragma unroll
             for (int i = 0; i < 2; i++) {
@@ -77,7 +78,10 @@ namespace brainpy_lib {
                     for (int p = 0; p < 4; ++p) {
                         int pos_y = i * 4 + p;
                         int pos_x = j * 4;
-                        conn[pos_y][pos_x] = conn_by_fixed_prob(state, m_idx1 + pos_y, n_idx1 + pos_x, p);
+                        conn[pos_y][pos_x] = conn_by_fixed_prob(state, m_idx1 + pos_y, n_idx1 + pos_x, prob);
+                        conn[pos_y][pos_x+1] = conn_by_fixed_prob(state, m_idx1 + pos_y, n_idx1 + pos_x+1, prob);
+                        conn[pos_y][pos_x+2] = conn_by_fixed_prob(state, m_idx1 + pos_y, n_idx1 + pos_x+2, prob);
+                        conn[pos_y][pos_x+3] = conn_by_fixed_prob(state, m_idx1 + pos_y, n_idx1 + pos_x+3, prob);
                     }
                 }
             }
