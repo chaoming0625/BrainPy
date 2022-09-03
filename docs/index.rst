@@ -32,6 +32,12 @@ The code of BrainPy is open-sourced at GitHub:
 
 
 
+.. note::
+   BrainPy version 2.2.x has been released. See
+   `release note <https://github.com/PKU-NIP-Lab/BrainPy/releases/tag/V2.2.0>`_
+   for details about changes from brainpy 2.1.x.
+
+
 .. toctree::
    :maxdepth: 1
    :caption: Quickstart
@@ -66,6 +72,7 @@ The code of BrainPy is open-sourced at GitHub:
    tutorial_toolbox/synaptic_weights
    tutorial_toolbox/optimizers
    tutorial_toolbox/saving_and_loading
+   tutorial_toolbox/inputs
 
 
 .. toctree::
