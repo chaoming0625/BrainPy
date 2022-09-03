@@ -68,7 +68,8 @@ def func_cpu_translation(func, abs_eval_fn, c, *inputs):
   input_shapes = [c.get_shape(arg) for arg in inputs]
   input_dtypes = tuple(shape.element_type() for shape in input_shapes)
   input_dimensions = tuple(shape.dimensions() for shape in input_shapes)
-  output_abstract_arrays = abs_eval_fn(*tuple(ShapedArray(shape.dimensions(), shape.element_type())
+  output_abstract_arrays = abs_eval_fn(*tuple(ShapedArray(shape.dimensions(),
+                                                          shape.element_type())
                                               for shape in input_shapes))
   output_shapes = tuple(array.shape for array in output_abstract_arrays)
   output_dtypes = tuple(array.dtype for array in output_abstract_arrays)

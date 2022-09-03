@@ -1,25 +1,27 @@
 # -*- coding: utf-8 -*-
 
-__all__ = [
-  'vector_matmul_mask',
-]
 
 import numpy as np
 from functools import partial
 
 import jax.numpy as jnp
 from jax import core
+from jax.lax import scan
 from jax.abstract_arrays import ShapedArray
-from jax.interpreters import xla
+from jax.interpreters import xla, batching
 from jax.lib import xla_client
+
+x_ops = xla_client.ops
+x_shape = xla_client.Shape.array_shape
 
 try:
   from . import gpu_ops
 except ImportError:
   gpu_ops = None
 
-x_shape = xla_client.Shape.array_shape
-x_ops = xla_client.ops
+__all__ = [
+  'vector_matmul_mask',
+]
 
 _vmmm_prim = core.Primitive("vector_matmul_mask")
 
@@ -52,10 +54,6 @@ def _vmmm_abstract(V, L, R, *, m, k, n, seed, p):
   return ShapedArray(shape=(n,), dtype=R.dtype)
 
 
-_vmmm_prim.def_abstract_eval(_vmmm_abstract)
-_vmmm_prim.def_impl(partial(xla.apply_primitive, _vmmm_prim))
-
-
 def _vmmm_translation(c, V, L, R, *, m, k, n, seed, p, platform="gpu"):
   if platform == "cpu":
     raise NotImplementedError
@@ -76,4 +74,25 @@ def _vmmm_translation(c, V, L, R, *, m, k, n, seed, p, platform="gpu"):
     raise ValueError("Unsupported platform, we only support 'cpu' or 'gpu'")
 
 
+def _vmmm_batch(args, axes, *, m, k, n, seed, p):
+  batch_axes, batch_args, non_batch_args = [], {}, {}
+  for ax_i, ax in enumerate(axes):
+    if ax is None:
+      non_batch_args[f'ax{ax_i}'] = args[ax_i]
+    else:
+      batch_args[f'ax{ax_i}'] = args[ax_i] if ax == 0 else jnp.moveaxis(args[ax_i], ax, 0)
+      batch_axes.append(ax_i)
+
+  def f(_, x):
+    pars = tuple([(x[f'ax{i}'] if i in batch_axes else non_batch_args[f'ax{i}'])
+                  for i in range(len(axes))])
+    return 0, _vmmm_prim.bind(*pars, m=m, k=k, n=n, seed=seed, p=p)
+
+  _, outs = scan(f, 0, batch_args)
+  return outs, 0
+
+
+_vmmm_prim.def_abstract_eval(_vmmm_abstract)
+_vmmm_prim.def_impl(partial(xla.apply_primitive, _vmmm_prim))
+batching.primitive_batchers[_vmmm_prim] = _vmmm_batch
 xla.backend_specific_translations["gpu"][_vmmm_prim] = partial(_vmmm_translation, platform="gpu")
