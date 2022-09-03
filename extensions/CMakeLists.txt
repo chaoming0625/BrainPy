@@ -26,6 +26,7 @@ pybind11_add_module(
     ${CMAKE_CURRENT_LIST_DIR}/lib/atomic_prod_gpu.cu
     ${CMAKE_CURRENT_LIST_DIR}/lib/atomic_sum_gpu.cu
     ${CMAKE_CURRENT_LIST_DIR}/lib/vmmm_gpu.cu
+    ${CMAKE_CURRENT_LIST_DIR}/lib/mmm_gpu.cu
 )
 install(TARGETS gpu_ops DESTINATION brainpylib)
 pybind11_add_module(

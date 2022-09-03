@@ -1,5 +1,5 @@
-#ifndef _BRAINPY_MAT_MUL_KERNELS_H_
-#define _BRAINPY_MAT_MUL_KERNELS_H_
+#ifndef _BRAINPY_VECTOR_MATMUL_MASKED_KERNELS_H_
+#define _BRAINPY_VECTOR_MATMUL_MASKED_KERNELS_H_
 
 #include <cstddef>
 #include <cstdint>

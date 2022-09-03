@@ -11,5 +11,6 @@ from .event_prod import *
 from .atomic_sum import *
 from .atomic_prod import *
 from .vmmm import *
+from .mmm import *
 from .custom_op import register_op
 

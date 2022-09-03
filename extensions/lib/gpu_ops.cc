@@ -10,6 +10,7 @@
 #include "atomic_sum_gpu.h"
 #include "atomic_prod_gpu.h"
 #include "vmmm_gpu.h"
+#include "mmm_gpu.h"
 
 using namespace brainpy_lib;
 
@@ -63,6 +64,7 @@ namespace {
 
         // matmul operators
         dict["vector_matmul_mask"] = EncapsulateFunction(vector_matmul_mask);
+        dict["masked_matmul"] = EncapsulateFunction(masked_matmul);
 
         return dict;
     }
