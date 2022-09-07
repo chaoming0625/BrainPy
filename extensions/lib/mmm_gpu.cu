@@ -3,18 +3,16 @@
 // it should get the point across.
 
 #include "mmm_gpu.h"
-#include "vmmm_gpu.h"
-#include "curand_kernel.h"
 
 namespace brainpy_lib {
 
     namespace {
 
+
         __device__ __noinline__
         bool conn_by_fixed_prob(curandState state, int source_id, int target_id, float p) {
             return curand_uniform(&state) < p;
         }
-
 
         __global__ __launch_bounds__(256, 2)
 

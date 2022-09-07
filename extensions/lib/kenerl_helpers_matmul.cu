@@ -3,23 +3,23 @@
 // descriptors that are used with the "opaque" parameter of the GPU custom call. In our example
 // we'll use this parameter to pass the size of our problem.
 
-#ifndef _BRAINPYLIB_KERNEL_HELPERS_CUDA_H_
-#define _BRAINPYLIB_KERNEL_HELPERS_CUDA_H_
 
+#include "kenerl_helpers_matmul.h"
 
-#include <cstdint>
-#include <cuda_runtime_api.h>
 
 namespace brainpy_lib {
-    // error handling //
-    static void ThrowIfError(cudaError_t error) {
-        if (error != cudaSuccess) {
-            throw std::runtime_error(cudaGetErrorString(error));
-        }
-    }
 
+    // Descriptors
+    pybind11::bytes build_matmul_descriptor(
+            std::uint32_t m,
+            std::uint32_t k,
+            std::uint32_t n,
+            std::uint32_t seed,
+            float p
+    ) {
+        return PackDescriptor(MatMulDescriptor{m, k, n, seed, p});
+    }
 
 
 }  // namespace brainpy_lib
 
-#endif

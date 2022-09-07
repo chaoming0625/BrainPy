@@ -1,10 +1,7 @@
 #ifndef _BRAINPY_MASKED_MATMUL_KERNELS_H_
 #define _BRAINPY_MASKED_MATMUL_KERNELS_H_
 
-#include <cstddef>
-#include <cstdint>
-#include "pybind11_kernel_helpers.h"
-#include "kernel_helpers_gpu.h"
+#include "kenerl_helpers_matmul.h"
 
 namespace brainpy_lib {
 

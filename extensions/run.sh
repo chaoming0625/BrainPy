@@ -1,4 +1,4 @@
-rm -rf build
+#rm -rf build
 
 pip uninstall brainpylib -y
 
@@ -10,5 +10,5 @@ mv /home/adadu/miniconda3/envs/py38/lib/python3.8/site-packages/brainpylib/gpu_o
 
 cd ./tests/
 
-python test_vmmm.py
+python try_mmm.py
 
