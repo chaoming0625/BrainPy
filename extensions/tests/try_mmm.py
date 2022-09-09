@@ -104,9 +104,23 @@ def try_mat_mtp_mask_2():
   print(r)
 
 
+def try_event_mmm():
+  m, k, n = int(100), 8, int(20)
+  op = EventMATxMASK(seed=123, n=n, p=0.1, k=k, N_THREAD=1)
+
+  key = random.PRNGKey(123)
+  keys = random.split(key, 2)
+  mat = random.uniform(keys[0], (k, m))
+  events = random.uniform(keys[1], (m, )) < 0.1
+  print(events)
+  r = op(events, mat)
+  print(r)
+
+
 if __name__ == '__main__':
   # try_vmmm()
   # compare_speed_of_vmmm_and_jax()
   # try_event_sum()
   # try_mat_mtp_mask_1()
-  try_mat_mtp_mask_2()
+  # try_mat_mtp_mask_2()
+  try_event_mmm()

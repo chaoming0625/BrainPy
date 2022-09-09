@@ -109,6 +109,8 @@ namespace brainpy_lib {
                 );
     }
 
+
+    // Descriptors
     struct MatMulDescriptor {
         std::uint32_t m;
         std::uint32_t k;
@@ -116,15 +118,17 @@ namespace brainpy_lib {
         std::uint32_t seed;
         float p;
     };
+    pybind11::bytes build_matmul_descriptor(std::uint32_t m, std::uint32_t k, std::uint32_t n, std::uint32_t seed, float p);
 
-    // Descriptors
-    pybind11::bytes build_matmul_descriptor(
-            std::uint32_t m,
-            std::uint32_t k,
-            std::uint32_t n,
-            std::uint32_t seed,
-            float p
-    );
+
+    struct MMMDescriptor {
+        std::uint32_t m;
+        std::uint32_t k;
+        std::uint32_t n;
+        float p;
+    };
+    pybind11::bytes build_mmm_descriptor(std::uint32_t m, std::uint32_t k, std::uint32_t n, float p);
+
 
 
 }  // namespace brainpy_lib

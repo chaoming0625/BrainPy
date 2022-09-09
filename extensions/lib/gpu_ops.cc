@@ -11,9 +11,10 @@
 #include "atomic_prod_gpu.h"
 #include "vmmm_gpu.h"
 #include "mmm_gpu.h"
-#include "mat_mtp_mask_gpu.h"
+//#include "mat_mtp_mask_gpu.h"
+#include "event_mmm_gpu.h"
 #include "random_gpu.h"
-#include "kenerl_helpers_matmul.h"
+#include "kernel_helpers_matmul.h"
 
 using namespace brainpy_lib;
 
@@ -71,13 +72,28 @@ namespace {
         dict["uniform"] = EncapsulateFunction(uniform);
         dict["uniform2"] = EncapsulateFunction(uniform2);
 
-        dict["mmm_8K_8x256x512"] = EncapsulateFunction(mmm_8K_8x256x512);
-        dict["mmm_8K_8x128x256"] = EncapsulateFunction(mmm_8K_8x128x256);
-        dict["mmm_8K_16x128x512"] = EncapsulateFunction(mmm_8K_16x128x512);
-        dict["mmm_8K_16x64x256"] = EncapsulateFunction(mmm_8K_16x64x256);
-        dict["mmm_8K_32x64x512"] = EncapsulateFunction(mmm_8K_32x64x512);
-        dict["mmm_8K_32x32x256"] = EncapsulateFunction(mmm_8K_32x32x256);
-        dict["event_mmm_8K_16x64x256"] = EncapsulateFunction(event_mmm_8K_16x64x256);
+//        dict["mmm_8K_1x8x128x256"] = EncapsulateFunction(mmm_8K_1x8x128x256);
+//        dict["mmm_8K_1x16x64x256"] = EncapsulateFunction(mmm_8K_1x16x64x256);
+//        dict["mmm_8K_1x32x32x256"] = EncapsulateFunction(mmm_8K_1x32x32x256);
+//        dict["mmm_8K_1x64x16x256"] = EncapsulateFunction(mmm_8K_1x64x16x256);
+//
+//        dict["mmm_8K_4x8x128x256"] = EncapsulateFunction(mmm_8K_4x8x128x256);
+//        dict["mmm_8K_4x16x64x256"] = EncapsulateFunction(mmm_8K_4x16x64x256);
+//        dict["mmm_8K_4x32x32x256"] = EncapsulateFunction(mmm_8K_4x32x32x256);
+//        dict["mmm_8K_4x64x16x256"] = EncapsulateFunction(mmm_8K_4x64x16x256);
+//
+//        dict["mmm_4K_1x8x128x256"] = EncapsulateFunction(mmm_4K_1x8x128x256);
+//        dict["mmm_4K_1x16x64x256"] = EncapsulateFunction(mmm_4K_1x16x64x256);
+//        dict["mmm_4K_1x32x32x256"] = EncapsulateFunction(mmm_4K_1x32x32x256);
+//        dict["mmm_4K_1x64x16x256"] = EncapsulateFunction(mmm_4K_1x64x16x256);
+//
+//        dict["mmm_4K_4x8x128x256"] = EncapsulateFunction(mmm_4K_4x8x128x256);
+//        dict["mmm_4K_4x16x64x256"] = EncapsulateFunction(mmm_4K_4x16x64x256);
+//        dict["mmm_4K_4x32x32x256"] = EncapsulateFunction(mmm_4K_4x32x32x256);
+//        dict["mmm_4K_4x64x16x256"] = EncapsulateFunction(mmm_4K_4x64x16x256);
+
+        dict["event_mmm_8K_1x8x128x256"] = EncapsulateFunction(event_mmm_8K_1x8x128x256);
+        dict["event_mmm_8K_4x8x128x256"] = EncapsulateFunction(event_mmm_8K_4x8x128x256);
 
 
         return dict;
@@ -93,6 +109,7 @@ namespace {
     m.def("build_atomic_prod_descriptor", &build_atomic_prod_descriptor);
     m.def("build_event_sum_descriptor", &build_event_sum_descriptor);
     m.def("build_matmul_descriptor", &build_matmul_descriptor);
+    m.def("build_mmm_descriptor", &build_mmm_descriptor);
     m.def("build_rand_sample_descriptor", &build_rand_sample_descriptor);
 }
 }  // namespace

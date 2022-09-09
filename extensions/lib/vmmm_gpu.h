@@ -3,7 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include "kenerl_helpers_matmul.h"
+#include "kernel_helpers_matmul.h"
 
 namespace brainpy_lib {
 

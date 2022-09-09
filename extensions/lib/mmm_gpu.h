@@ -1,7 +1,7 @@
 #ifndef _BRAINPY_MASKED_MATMUL_KERNELS_H_
 #define _BRAINPY_MASKED_MATMUL_KERNELS_H_
 
-#include "kenerl_helpers_matmul.h"
+#include "kernel_helpers_matmul.h"
 
 namespace brainpy_lib {
 
