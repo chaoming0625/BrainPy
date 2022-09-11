@@ -12,6 +12,12 @@ namespace brainpy_lib {
     void event_mmm_fp_v1_32x8x256(cudaStream_t stream, void **buffers, const char *opaque, std::size_t opaque_len);
 
 
+    void event_mmm_fp_v2_4x64x256(cudaStream_t stream, void **buffers, const char *opaque, std::size_t opaque_len);
+    void event_mmm_fp_v2_8x32x256(cudaStream_t stream, void **buffers, const char *opaque, std::size_t opaque_len);
+    void event_mmm_fp_v2_16x16x256(cudaStream_t stream, void **buffers, const char *opaque, std::size_t opaque_len);
+    void event_mmm_fp_v2_32x8x256(cudaStream_t stream, void **buffers, const char *opaque, std::size_t opaque_len);
+
+
 }  // namespace brainpy_lib
 
 #endif

@@ -25,18 +25,25 @@ __all__ = [
 ]
 
 event_mmm_op_names = {
-  'v1':
-    {'fp':
-      {
-        'k=4': b'event_mmm_fp_v1_4x64x256',
-        'k=8': b'event_mmm_fp_v1_8x32x256',
-        'k=16': b'event_mmm_fp_v1_16x16x256',
-        'k=32': b'event_mmm_fp_v1_32x8x256',
-      }
-    },
+  'v1': {'fp':
+    {
+      'k=4': b'event_mmm_fp_v1_4x64x256',
+      'k=8': b'event_mmm_fp_v1_8x32x256',
+      'k=16': b'event_mmm_fp_v1_16x16x256',
+      'k=32': b'event_mmm_fp_v1_32x8x256',
+    }
+  },
+  'v2': {'fp':
+    {
+      'k=4': b'event_mmm_fp_v2_4x64x256',
+      'k=8': b'event_mmm_fp_v2_8x32x256',
+      'k=16': b'event_mmm_fp_v2_16x16x256',
+      'k=32': b'event_mmm_fp_v2_32x8x256',
+    }
+  },
 }
 
-all_ks = np.asarray([8, 16, 32, 64])
+all_ks = np.asarray([4, 8, 16, 32])
 
 
 def _get_k(k):
@@ -49,9 +56,11 @@ class EventMATxMASK(BrainPyOp):
   def __init__(self, seed, n, p, k, version='v1'):
     self.seed = seed
     self.n = n
-    self.p = float(np.log((1 - p) if p < 1 else 1e-40).astype(np.float32))
     self.k = k
-
+    if version == 'v1':
+      self.p = float(np.log((1 - p) if p < 1 else 1e-40).astype(np.float32))
+    else:
+      self.p = p
     self.fn = event_mmm_op_names[version]['fp'][f'k={_get_k(k)}']
 
   def __call__(self, events, mat):

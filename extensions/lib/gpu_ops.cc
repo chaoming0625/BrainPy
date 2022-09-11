@@ -97,6 +97,11 @@ namespace {
         dict["event_mmm_fp_v1_16x16x256"] = EncapsulateFunction(event_mmm_fp_v1_16x16x256);
         dict["event_mmm_fp_v1_32x8x256"] = EncapsulateFunction(event_mmm_fp_v1_32x8x256);
 
+        dict["event_mmm_fp_v2_4x64x256"] = EncapsulateFunction(event_mmm_fp_v2_4x64x256);
+        dict["event_mmm_fp_v2_8x32x256"] = EncapsulateFunction(event_mmm_fp_v2_8x32x256);
+        dict["event_mmm_fp_v2_16x16x256"] = EncapsulateFunction(event_mmm_fp_v2_16x16x256);
+        dict["event_mmm_fp_v2_32x8x256"] = EncapsulateFunction(event_mmm_fp_v2_32x8x256);
+
 
         return dict;
     }
