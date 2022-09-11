@@ -6,8 +6,9 @@ __version__ = "0.0.6"
 from . import register_custom_calls
 
 # import operators
-from .event_sum import *
+from .event_mmm import *
 from .event_prod import *
+from .event_sum import *
 from .atomic_sum import *
 from .atomic_prod import *
 from .vmmm import *

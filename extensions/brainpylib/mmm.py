@@ -24,7 +24,6 @@ except ImportError:
 __all__ = [
   'masked_matmul',
   'MATxMASK',
-  'EventMATxMASK',
 ]
 
 _mmm_prim = core.Primitive("masked_matmul")
@@ -182,57 +181,3 @@ mmm_prom = core.Primitive("mat_mtp_mask")
 mmm_prom.def_abstract_eval(mat_mul_mask_abstract)
 mmm_prom.def_impl(partial(xla.apply_primitive, mmm_prom))
 xla.backend_specific_translations["gpu"][mmm_prom] = partial(mat_mtp_mask_translation, platform="gpu")
-
-event_mmm_op_names = {
-  '8K_sm': {'n=1': {'k=8': b'event_mmm_8K_1x8x128x256', },
-            'n=4': {'k=8': b'event_mmm_8K_4x8x128x256', }
-            },
-}
-
-
-class EventMATxMASK(BrainPyOp):
-  def __init__(self, seed, n, p, k, N_THREAD=1, SM_size='8K'):
-    self.seed = seed
-    self.n = n
-    self.p = float(np.log((1 - p) if p < 1 else 1e-40).astype(np.float32))
-    self.k = k
-    self.N_THREAD = N_THREAD  # number of column for each thread
-    self.fn = event_mmm_op_names[f"{SM_size}_sm"][f'n={N_THREAD}'][f'k={k}']
-    # self.keys = jr.split(jr.PRNGKey(seed), (n + N_THREAD - 1) // N_THREAD * 6)
-
-  def __call__(self, events, mat):
-    if mat.dtype != jnp.float32:
-      raise ValueError(f'Must be a matrix of float32, while we got {mat.dtype}')
-    assert mat.ndim == 2
-    assert mat.shape[0] == self.k
-    return event_mmm_prim.bind(events, mat,
-                               p=self.p,
-                               k=self.k,
-                               m=mat.shape[1],
-                               n=self.n,
-                               fn=self.fn,
-                               seed=self.seed)
-
-
-def event_mmm_abstract(events, mat, *, p, k, m, n, seed, fn):
-  return ShapedArray(shape=(k, n), dtype=mat.dtype)
-
-
-def event_mmm_translation_gpu(c, events, mat, *, p, k, m, n, seed, fn):
-  if gpu_ops is None: raise ValueError('Cannot find compiled gpu wheels.')
-
-  opaque = gpu_ops.build_matmul_descriptor(m, k, n, seed, p)
-  return x_ops.CustomCallWithLayout(
-    c,
-    fn,
-    operands=(events, mat),
-    operand_shapes_with_layout=(c.get_shape(events), c.get_shape(mat)),
-    shape_with_layout=x_shape(np.dtype(c.get_shape(mat).element_type()), (k, n), (1, 0)),
-    opaque=opaque,
-  )
-
-
-event_mmm_prim = core.Primitive("event_mat_mtp_mask")
-event_mmm_prim.def_abstract_eval(event_mmm_abstract)
-event_mmm_prim.def_impl(partial(xla.apply_primitive, event_mmm_prim))
-xla.backend_specific_translations["gpu"][event_mmm_prim] = event_mmm_translation_gpu
