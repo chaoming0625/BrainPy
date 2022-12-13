@@ -18,10 +18,11 @@ except ImportError:
   from jax.core import UnexpectedTracerError, ConcretizationTypeError
 
 from brainpy import errors
-from brainpy.base.base import Base
+from brainpy.base.base import BrainPyObject
 from brainpy.base.collector import TensorCollector
-from brainpy.math.jaxarray import JaxArray, add_context, del_context
+from brainpy.math.jaxarray import Array, add_context, del_context
 from .base import ObjectTransform
+from ._utils import infer_dyn_vars
 
 __all__ = [
   'jit',
@@ -79,8 +80,6 @@ class ObjectJIT(ObjectTransform):
     return out
 
 
-
-
 def jit(func, dyn_vars=None, static_argnames=None, device=None, auto_infer=True):
   """JIT (Just-In-Time) compilation for class objects.
 
@@ -99,7 +98,7 @@ def jit(func, dyn_vars=None, static_argnames=None, device=None, auto_infer=True)
     >>> import brainpy as bp
     >>> import brainpy.math as bm
     >>>
-    >>> class Test(bp.Base):
+    >>> class Test(bp.BrainPyObject):
     >>>   def __init__(self):
     >>>     super(Test, self).__init__()
     >>>     self.a = bm.Variable(1.)  # Avoid! DO NOT USE!
@@ -109,7 +108,7 @@ def jit(func, dyn_vars=None, static_argnames=None, device=None, auto_infer=True)
     The above usage is deprecated, because it may cause several errors.
     Instead, we recommend you define the scalar value variable as:
 
-    >>> class Test(bp.Base):
+    >>> class Test(bp.BrainPyObject):
     >>>   def __init__(self):
     >>>     super(Test, self).__init__()
     >>>     self.a = bm.Variable(bm.array([1.]))  # use array to wrap a scalar is recommended
@@ -152,7 +151,7 @@ def jit(func, dyn_vars=None, static_argnames=None, device=None, auto_infer=True)
 
   You can also JIT a bounded method of a :py:class:`brainpy.Base` object.
 
-  >>> class Hello(bp.Base):
+  >>> class Hello(bp.BrainPyObject):
   >>>   def __init__(self):
   >>>     super(Hello, self).__init__()
   >>>     self.a = bp.math.Variable(bp.math.array(10.))
@@ -174,7 +173,7 @@ def jit(func, dyn_vars=None, static_argnames=None, device=None, auto_infer=True)
   ----------
   func : Base, function, callable
     The instance of Base or a function.
-  dyn_vars : optional, dict, tuple, list, JaxArray
+  dyn_vars : optional, dict, tuple, list, Array
     These variables will be changed in the function, or needed in the computation.
   static_argnames : optional, str, list, tuple, dict
     An optional string or collection of strings specifying which named arguments to treat
@@ -197,7 +196,7 @@ def jit(func, dyn_vars=None, static_argnames=None, device=None, auto_infer=True)
   """
   if callable(func):
     if dyn_vars is not None:
-      if isinstance(dyn_vars, JaxArray):
+      if isinstance(dyn_vars, Array):
         dyn_vars = TensorCollector({'_': dyn_vars})
       elif isinstance(dyn_vars, dict):
         dyn_vars = TensorCollector(dyn_vars)
@@ -207,21 +206,16 @@ def jit(func, dyn_vars=None, static_argnames=None, device=None, auto_infer=True)
         raise ValueError
     else:
       if auto_infer:
-        if isinstance(func, Base):
-          dyn_vars = func.vars().unique()
-        elif hasattr(func, '__self__') and isinstance(func.__self__, Base):
-          dyn_vars = func.__self__.vars().unique()
-        else:
-          dyn_vars = TensorCollector()
+        dyn_vars = infer_dyn_vars(func)
       else:
         dyn_vars = TensorCollector()
 
     if len(dyn_vars) == 0:  # pure function
       return FunctionJIT(func, static_argnames=static_argnames, device=device)
 
-    else:  # Base object which implements __call__, or bounded method of Base object
+    else:  # BrainPyObject object which implements __call__, or bounded method of BrainPyObject object
       return ObjectJIT(vars=dyn_vars, func=func, static_argnames=static_argnames, device=device)
 
   else:
-    raise errors.BrainPyError(f'Only support instance of {Base.__name__}, or a callable '
+    raise errors.BrainPyError(f'Only support instance of {BrainPyObject.__name__}, or a callable '
                               f'function, but we got {type(func)}.')

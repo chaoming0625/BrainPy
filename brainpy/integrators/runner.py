@@ -140,7 +140,7 @@ class IntegratorRunner(Runner):
 
     # get maximum size and initial variables
     if inits is not None:
-      if isinstance(inits, (list, tuple, bm.JaxArray, jnp.ndarray)):
+      if isinstance(inits, (list, tuple, bm.Array, jnp.ndarray)):
         assert len(target.variables) == len(inits)
         inits = {k: inits[i] for i, k in enumerate(target.variables)}
       assert isinstance(inits, dict), f'"inits" must be a dict, but we got {type(inits)}'
@@ -218,7 +218,7 @@ class IntegratorRunner(Runner):
     # build the update step
     if self.jit['predict']:
       def _loop_func(times):
-        return bm.for_loop(self._step, self.dyn_vars, times)
+        return bm.for_loop(self._step, times, dyn_vars=self.dyn_vars)
     else:
       def _loop_func(times):
         returns = {k: [] for k in self.fun_monitors.keys()}

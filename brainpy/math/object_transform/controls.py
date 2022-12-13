@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-from typing import Union, Sequence, Any, Dict, Callable, Optional
+from typing import Union, Sequence, Any, Dict, Callable
 
 import jax.numpy as jnp
 from jax import lax
@@ -14,10 +14,12 @@ except ImportError:
 
 from brainpy import errors
 from brainpy.base.naming import get_unique_name
-from brainpy.math.jaxarray import (JaxArray, Variable,
+from brainpy.base import TensorCollector
+from brainpy.math.jaxarray import (Array, Variable,
                                    add_context,
                                    del_context)
 from brainpy.math.numpy_ops import as_device_array
+from ._utils import infer_dyn_vars
 
 __all__ = [
   'make_loop',
@@ -40,18 +42,18 @@ def _get_scan_info(f, dyn_vars, out_vars=None, has_return=False):
   else:
     raise ValueError(
       f'"dyn_vars" does not support {type(dyn_vars)}, '
-      f'only support dict/list/tuple of {JaxArray.__name__}')
+      f'only support dict/list/tuple of {Array.__name__}')
   for v in dyn_vars:
-    if not isinstance(v, JaxArray):
+    if not isinstance(v, Array):
       raise ValueError(
         f'brainpy.math.jax.make_loop only support '
-        f'{JaxArray.__name__}, but got {type(v)}')
+        f'{Array.__name__}, but got {type(v)}')
 
   # outputs
   if out_vars is None:
     out_vars = ()
     _, tree = tree_flatten(out_vars)
-  elif isinstance(out_vars, JaxArray):
+  elif isinstance(out_vars, Array):
     _, tree = tree_flatten(out_vars)
     out_vars = (out_vars,)
   elif isinstance(out_vars, dict):
@@ -63,7 +65,7 @@ def _get_scan_info(f, dyn_vars, out_vars=None, has_return=False):
   else:
     raise ValueError(
       f'"out_vars" does not support {type(out_vars)}, '
-      f'only support dict/list/tuple of {JaxArray.__name__}')
+      f'only support dict/list/tuple of {Array.__name__}')
 
   # functions
   if has_return:
@@ -125,7 +127,7 @@ def make_loop(body_fun, dyn_vars, out_vars=None, has_return=False):
             [ 9.],
             [10.]], dtype=float32)
   >>> hist_b_plus
-  JaxArray([[ 2.],
+  Array([[ 2.],
             [ 3.],
             [ 4.],
             [ 5.],
@@ -140,9 +142,9 @@ def make_loop(body_fun, dyn_vars, out_vars=None, has_return=False):
   ----------
   body_fun : callable, function
     A function receive one argument. This argument refers to the iterable input ``x``.
-  dyn_vars : dict of JaxArray, sequence of JaxArray
+  dyn_vars : dict of Array, sequence of Array
     The dynamically changed variables, while iterate between trials.
-  out_vars : optional, JaxArray, dict of JaxArray, sequence of JaxArray
+  out_vars : optional, Array, dict of Array, sequence of Array
     The variables to output their values.
   has_return : bool
     The function has the return values.
@@ -202,7 +204,7 @@ def make_while(cond_fun, body_fun, dyn_vars):
   """Make a while-loop function.
 
   This function is similar to the ``jax.lax.while_loop``. The difference is that,
-  if you are using ``JaxArray`` in your while loop codes, this function will help
+  if you are using ``Array`` in your while loop codes, this function will help
   you make a easy while loop function. Note: ``cond_fun`` and ``body_fun`` do no
   receive any arguments. ``cond_fun`` shoule return a boolean value. ``body_fun``
   does not support return values.
@@ -219,7 +221,7 @@ def make_while(cond_fun, body_fun, dyn_vars):
   >>> loop = bm.make_while(cond_f, body_f, dyn_vars=[a])
   >>> loop()
   >>> a
-  JaxArray([10.], dtype=float32)
+  Array([10.], dtype=float32)
 
   Parameters
   ----------
@@ -227,7 +229,7 @@ def make_while(cond_fun, body_fun, dyn_vars):
     A function receives one argument, but return a boolean value.
   body_fun : function, callable
     A function receives one argument, without any returns.
-  dyn_vars : dict of JaxArray, sequence of JaxArray
+  dyn_vars : dict of Array, sequence of Array
     The dynamically changed variables, while iterate between trials.
 
   Returns
@@ -242,10 +244,10 @@ def make_while(cond_fun, body_fun, dyn_vars):
     dyn_vars = tuple(dyn_vars)
   else:
     raise ValueError(f'"dyn_vars" does not support {type(dyn_vars)}, '
-                     f'only support dict/list/tuple of {JaxArray.__name__}')
+                     f'only support dict/list/tuple of {Array.__name__}')
   for v in dyn_vars:
-    if not isinstance(v, JaxArray):
-      raise ValueError(f'Only support {JaxArray.__name__}, but got {type(v)}')
+    if not isinstance(v, Array):
+      raise ValueError(f'Only support {Array.__name__}, but got {type(v)}')
 
   def _body_fun(op):
     dyn_values, static_values = op
@@ -297,12 +299,12 @@ def make_cond(true_fun, false_fun, dyn_vars=None):
   >>> cond = bm.make_cond(true_f, false_f, dyn_vars=[a, b])
   >>> cond(True)
   >>> a, b
-  (JaxArray([1., 1.], dtype=float32),
-   JaxArray([1., 1.], dtype=float32))
+  (Array([1., 1.], dtype=float32),
+   Array([1., 1.], dtype=float32))
   >>> cond(False)
   >>> a, b
-  (JaxArray([1., 1.], dtype=float32),
-   JaxArray([0., 0.], dtype=float32))
+  (Array([1., 1.], dtype=float32),
+   Array([0., 0.], dtype=float32))
 
   Parameters
   ----------
@@ -310,7 +312,7 @@ def make_cond(true_fun, false_fun, dyn_vars=None):
     A function receives one argument, without any returns.
   false_fun : callable, function
     A function receives one argument, without any returns.
-  dyn_vars : dict of JaxArray, sequence of JaxArray
+  dyn_vars : dict of Array, sequence of Array
     The dynamically changed variables.
 
   Returns
@@ -322,7 +324,7 @@ def make_cond(true_fun, false_fun, dyn_vars=None):
   # iterable variables
   if dyn_vars is None:
     dyn_vars = []
-  if isinstance(dyn_vars, JaxArray):
+  if isinstance(dyn_vars, Array):
     dyn_vars = (dyn_vars,)
   elif isinstance(dyn_vars, dict):
     dyn_vars = tuple(dyn_vars.values())
@@ -330,10 +332,10 @@ def make_cond(true_fun, false_fun, dyn_vars=None):
     dyn_vars = tuple(dyn_vars)
   else:
     raise ValueError(f'"dyn_vars" does not support {type(dyn_vars)}, '
-                     f'only support dict/list/tuple of {JaxArray.__name__}')
+                     f'only support dict/list/tuple of {Array.__name__}')
   for v in dyn_vars:
-    if not isinstance(v, JaxArray):
-      raise ValueError(f'Only support {JaxArray.__name__}, but got {type(v)}')
+    if not isinstance(v, Array):
+      raise ValueError(f'Only support {Array.__name__}, but got {type(v)}')
 
   name = get_unique_name('_brainpy_object_oriented_make_cond_')
 
@@ -392,10 +394,11 @@ def _check_sequence(a):
 
 def cond(
     pred: bool,
-    true_fun: Union[Callable, jnp.ndarray, JaxArray, float, int, bool],
-    false_fun: Union[Callable, jnp.ndarray, JaxArray, float, int, bool],
+    true_fun: Union[Callable, jnp.ndarray, Array, float, int, bool],
+    false_fun: Union[Callable, jnp.ndarray, Array, float, int, bool],
     operands: Any,
-    dyn_vars: Union[Variable, Sequence[Variable], Dict[str, Variable]] = None
+    dyn_vars: Union[Variable, Sequence[Variable], Dict[str, Variable]] = None,
+    auto_infer: bool =True
 ):
   """Simple conditional statement (if-else) with instance of :py:class:`~.Variable`.
 
@@ -417,10 +420,10 @@ def cond(
   ----------
   pred: bool
     Boolean scalar type, indicating which branch function to apply.
-  true_fun: callable, jnp.ndarray, JaxArray, float, int, bool
+  true_fun: callable, jnp.ndarray, Array, float, int, bool
     Function to be applied if ``pred`` is True.
     This function must receive one arguement for ``operands``.
-  false_fun: callable, jnp.ndarray, JaxArray, float, int, bool
+  false_fun: callable, jnp.ndarray, Array, float, int, bool
     Function to be applied if ``pred`` is False.
     This function must receive one arguement for ``operands``.
   operands: Any
@@ -428,6 +431,8 @@ def cond(
     can be a scalar, array, or any pytree (nested Python tuple/list/dict) thereof.
   dyn_vars: optional, Variable, sequence of Variable, dict
     The dynamically changed variables.
+  auto_infer: bool
+    Automatically infer all ``Variable`` instances used in the target.
 
   Returns
   -------
@@ -438,7 +443,7 @@ def cond(
   true_fun = _check_f(true_fun)
   false_fun = _check_f(false_fun)
   if dyn_vars is None:
-    dyn_vars = tuple()
+    dyn_vars = (infer_dyn_vars(true_fun) + infer_dyn_vars(false_fun)) if auto_infer else tuple()
   elif isinstance(dyn_vars, Variable):
     dyn_vars = (dyn_vars,)
   elif isinstance(dyn_vars, dict):
@@ -500,6 +505,7 @@ def ifelse(
     operands: Any = None,
     dyn_vars: Union[Variable, Sequence[Variable], Dict[str, Variable]] = None,
     show_code: bool = False,
+    auto_infer: bool = True,
 ):
   """``If-else`` control flows looks like native Pythonic programming.
 
@@ -538,6 +544,9 @@ def ifelse(
     The dynamically changed variables.
   show_code: bool
     Whether show the formatted code.
+  auto_infer: bool
+    Automatically infer all ``Variable`` instances used in the target.
+
 
   Returns
   -------
@@ -559,7 +568,9 @@ def ifelse(
                      f'Got len(conditions)={len(conditions)} and len(branches)={len(branches)}. '
                      f'We expect len(conditions) + 1 == len(branches). ')
   if dyn_vars is None:
-    dyn_vars = []
+    dyn_vars = TensorCollector()
+    for f in branches:
+      dyn_vars += infer_dyn_vars(f)
   if isinstance(dyn_vars, Variable):
     dyn_vars = (dyn_vars,)
   elif isinstance(dyn_vars, dict):
@@ -576,7 +587,11 @@ def ifelse(
   # format new codes
   if len(conditions) == 1:
     if len(dyn_vars) > 0:
-      return cond(conditions[0], branches[0], branches[1], operands, dyn_vars)
+      return cond(conditions[0],
+                  branches[0],
+                  branches[1],
+                  operands,
+                  dyn_vars)
     else:
       return lax.cond(conditions[0], branches[0], branches[1], operands)
   else:
@@ -607,11 +622,14 @@ def ifelse(
     return r
 
 
-def for_loop(body_fun: Callable,
-             dyn_vars: Union[Variable, Sequence[Variable], Dict[str, Variable]],
-             operands: Any,
-             reverse: bool = False,
-             unroll: int = 1):
+def for_loop(
+    body_fun: Callable,
+    operands: Any,
+    dyn_vars: Union[Variable, Sequence[Variable], Dict[str, Variable]] = None,
+    reverse: bool = False,
+    unroll: int = 1,
+    auto_infer: bool =True
+):
   """``for-loop`` control flow with :py:class:`~.Variable`.
 
   Simply speaking, all dynamically changed variables used in the body function should
@@ -676,6 +694,9 @@ def for_loop(body_fun: Callable,
     Optional positive int specifying, in the underlying operation of the
     scan primitive, how many scan iterations to unroll within a single
     iteration of a loop.
+  auto_infer: bool
+    Automatically infer all ``Variable`` instances used in the target.
+
 
   Returns
   -------
@@ -684,7 +705,7 @@ def for_loop(body_fun: Callable,
   """
   # check variables
   if dyn_vars is None:
-    dyn_vars = ()
+    dyn_vars = infer_dyn_vars(body_fun) if auto_infer else tuple()
   if isinstance(dyn_vars, Variable):
     dyn_vars = (dyn_vars,)
   elif isinstance(dyn_vars, dict):
@@ -734,8 +755,9 @@ def for_loop(body_fun: Callable,
 def while_loop(
     body_fun: Callable,
     cond_fun: Callable,
-    dyn_vars: Union[Variable, Sequence[Variable], Dict[str, Variable]],
-    operands: Any,
+operands: Any,
+    dyn_vars: Union[Variable, Sequence[Variable], Dict[str, Variable]]=None,
+    auto_infer: bool =True
 ):
   """``while-loop`` control flow with :py:class:`~.Variable`.
 
@@ -777,9 +799,14 @@ def while_loop(
     The dynamically changed variables.
   operands: Any
     The operands for ``body_fun`` and ``cond_fun`` functions.
+  auto_infer: bool
+    Automatically infer all ``Variable`` instances used in the target.
+
   """
   # iterable variables
-  if isinstance(dyn_vars, Variable):
+  if dyn_vars is None:
+    dyn_vars = (infer_dyn_vars(body_fun) + infer_dyn_vars(cond_fun)) if auto_infer else tuple()
+  elif isinstance(dyn_vars, Variable):
     dyn_vars = (dyn_vars,)
   elif isinstance(dyn_vars, dict):
     dyn_vars = tuple(dyn_vars.values())
@@ -792,25 +819,25 @@ def while_loop(
     if not isinstance(v, Variable):
       raise ValueError(f'Only support {Variable.__name__}, but got {type(v)}')
   if not isinstance(operands, (list, tuple)):
-    operands = (operands, )
+    operands = (operands,)
 
   def _body_fun(op):
     dyn_vals, static_vals = op
     for v, d in zip(dyn_vars, dyn_vals): v._value = d
     if not isinstance(static_vals, (tuple, list)):
-      static_vals = (static_vals, )
+      static_vals = (static_vals,)
     new_vals = body_fun(*static_vals)
     if new_vals is None:
       new_vals = tuple()
     if not isinstance(new_vals, tuple):
-      new_vals = (new_vals, )
+      new_vals = (new_vals,)
     return [v.value for v in dyn_vars], new_vals
 
   def _cond_fun(op):
     dyn_vals, static_vals = op
     for v, d in zip(dyn_vars, dyn_vals): v._value = d
     r = cond_fun(*static_vals)
-    return r if isinstance(r, JaxArray) else r
+    return r if isinstance(r, Array) else r
 
   name = get_unique_name('_brainpy_object_oriented_while_loop_')
   dyn_init = [v.value for v in dyn_vars]
