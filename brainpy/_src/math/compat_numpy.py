@@ -12,13 +12,6 @@ from .arrayinterporate import *
 from .ndarray import Array
 
 
-class SupportsDType(Protocol):
-  @property
-  def dtype(self) -> np.dtype: ...
-
-
-DTypeLike = Union[Any, str, np.dtype, SupportsDType]
-
 __all__ = [
   'full', 'full_like', 'eye', 'identity', 'diag', 'tri', 'tril', 'triu',
   'empty', 'empty_like', 'ones', 'ones_like', 'zeros', 'zeros_like',
