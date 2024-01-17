@@ -11,6 +11,7 @@ from .base import _InterLayerInitializer
 
 __all__ = [
   'Normal',
+  'TruncatedNormal',
   'Uniform',
   'VarianceScaling',
   'KaimingUniform',
@@ -82,7 +83,7 @@ def _format_shape(shape):
   if len(shape) == 0:
     raise ValueError('Please provide shape.')
   if len(shape) == 1:
-    if isinstance(shape, (tuple, list)):
+    if isinstance(shape[0], (tuple, list)):
       return shape[0]
     else:
       return shape
@@ -121,6 +122,50 @@ class Normal(_InterLayerInitializer):
   def __repr__(self):
     return f'{self.__class__.__name__}(scale={self.scale}, rng={self.rng})'
 
+
+class TruncatedNormal(_InterLayerInitializer):
+  """Initialize weights with truncated normal distribution.
+
+  Parameters
+  ----------
+  loc : float, ndarray
+    Mean ("centre") of the distribution before truncating. Note that 
+    the mean of the truncated distribution will not be exactly equal 
+    to ``loc``.
+  scale : float
+    The standard deviation of the normal distribution before truncating.
+  lower : float, ndarray
+    A float or array of floats representing the lower bound for
+      truncation. Must be broadcast-compatible with ``upper``.
+  upper : float, ndarray
+    A float or array of floats representing the  upper bound for
+    truncation. Must be broadcast-compatible with ``lower``.
+
+  """
+
+  def __init__(self, loc=0., scale=1., lower=None, upper=None, seed=None):
+    super(TruncatedNormal, self).__init__()
+    assert scale > 0, '`scale` must be positive.'
+    self.scale = scale
+    self.loc = loc
+    self.lower = lower
+    self.upper = upper
+    self.rng = bm.random.default_rng(seed, clone=False)
+
+  def __call__(self, shape, dtype=None):
+    shape = _format_shape(shape)
+    weights = self.rng.truncated_normal(
+      size=shape, 
+      scale=self.scale, 
+      lower=self.lower, 
+      upper=self.upper,
+      loc=self.loc
+    )
+    return bm.asarray(weights, dtype=dtype)
+
+  def __repr__(self):
+    return f'{self.__class__.__name__}(loc={self.loc}, scale={self.scale}, lower={self.lower}, upper={self.upper}, rng={self.rng})'
+  
 
 class Gamma(_InterLayerInitializer):
   """Initialize weights with Gamma distribution.
@@ -227,7 +272,7 @@ class VarianceScaling(_InterLayerInitializer):
     variance = (self.scale / denominator).astype(dtype)
     if self.distribution == "truncated_normal":
       stddev = (jnp.sqrt(variance) / .87962566103423978).astype(dtype)
-      res = self.rng.truncated_normal(-2, 2, shape, dtype) * stddev
+      res = self.rng.truncated_normal(-2, 2, shape).astype(dtype) * stddev
     elif self.distribution == "normal":
       res = self.rng.randn(*shape) * jnp.sqrt(variance).astype(dtype)
     elif self.distribution == "uniform":

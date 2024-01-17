@@ -2,7 +2,8 @@ from typing import Union, Sequence, Callable, Optional
 
 from brainpy import math as bm
 from brainpy._src.context import share
-from brainpy._src.dyn._docs import pneu_doc
+from brainpy._src.initialize import parameter
+from brainpy._src.dyn import _docs
 from brainpy._src.dyn.base import SynDyn
 from brainpy._src.integrators.joint_eq import JointEq
 from brainpy._src.integrators.ode.generic import odeint
@@ -10,7 +11,6 @@ from brainpy._src.mixin import AlignPost, ReturnInfo
 from brainpy.types import ArrayType
 
 __all__ = [
-  'Delta',
   'Expon',
   'DualExpon',
   'DualExponV2',
@@ -21,94 +21,10 @@ __all__ = [
 ]
 
 
-class Delta(SynDyn, AlignPost):
-  r"""Delta synapse model.
-
-  **Model Descriptions**
-
-  The single exponential decay synapse model assumes the release of neurotransmitter,
-  its diffusion across the cleft, the receptor binding, and channel opening all happen
-  very quickly, so that the channels instantaneously jump from the closed to the open state.
-  Therefore, its expression is given by
-
-  .. math::
-
-      g_{\mathrm{syn}}(t)=g_{\mathrm{max}} e^{-\left(t-t_{0}\right) / \tau}
-
-  where :math:`\tau_{delay}` is the time constant of the synaptic state decay,
-  :math:`t_0` is the time of the pre-synaptic spike,
-  :math:`g_{\mathrm{max}}` is the maximal conductance.
-
-  Accordingly, the differential form of the exponential synapse is given by
-
-  .. math::
-
-      \begin{aligned}
-       & \frac{d g}{d t} = -\frac{g}{\tau_{decay}}+\sum_{k} \delta(t-t_{j}^{k}).
-       \end{aligned}
-
-  .. [1] Sterratt, David, Bruce Graham, Andrew Gillies, and David Willshaw.
-          "The Synapse." Principles of Computational Modelling in Neuroscience.
-          Cambridge: Cambridge UP, 2011. 172-95. Print.
-
-  """
-
-  def __init__(
-      self,
-      size: Union[int, Sequence[int]],
-      keep_size: bool = False,
-      sharding: Optional[Sequence[str]] = None,
-      name: Optional[str] = None,
-      mode: Optional[bm.Mode] = None,
-  ):
-    super().__init__(name=name,
-                     mode=mode,
-                     size=size,
-                     keep_size=keep_size,
-                     sharding=sharding)
-
-    self.reset_state(self.mode)
-
-  def reset_state(self, batch_or_mode=None, **kwargs):
-    self.g = self.init_variable(bm.zeros, batch_or_mode)
-
-  def update(self, x=None):
-    if x is not None:
-      self.g.value += x
-    return self.g.value
-
-  def add_current(self, x):
-    self.g.value += x
-
-  def return_info(self):
-    return self.g
-
-
 class Expon(SynDyn, AlignPost):
   r"""Exponential decay synapse model.
 
-  **Model Descriptions**
-
-  The single exponential decay synapse model assumes the release of neurotransmitter,
-  its diffusion across the cleft, the receptor binding, and channel opening all happen
-  very quickly, so that the channels instantaneously jump from the closed to the open state.
-  Therefore, its expression is given by
-
-  .. math::
-
-      g_{\mathrm{syn}}(t)=g_{\mathrm{max}} e^{-\left(t-t_{0}\right) / \tau}
-
-  where :math:`\tau_{delay}` is the time constant of the synaptic state decay,
-  :math:`t_0` is the time of the pre-synaptic spike,
-  :math:`g_{\mathrm{max}}` is the maximal conductance.
-
-  Accordingly, the differential form of the exponential synapse is given by
-
-  .. math::
-
-      \begin{aligned}
-       & \frac{d g}{d t} = -\frac{g}{\tau_{decay}}+\sum_{k} \delta(t-t_{j}^{k}).
-       \end{aligned}
+  %s
 
   This module can be used with interface ``brainpy.dyn.ProjAlignPreMg2``, as shown in the following example:
 
@@ -170,11 +86,6 @@ class Expon(SynDyn, AlignPost):
                 )
 
 
-
-  .. [1] Sterratt, David, Bruce Graham, Andrew Gillies, and David Willshaw.
-          "The Synapse." Principles of Computational Modelling in Neuroscience.
-          Cambridge: Cambridge UP, 2011. 172-95. Print.
-
   Args:
     tau: float. The time constant of decay. [ms]
     %s
@@ -226,36 +137,21 @@ class Expon(SynDyn, AlignPost):
     return self.g
 
 
-Expon.__doc__ = Expon.__doc__ % (pneu_doc,)
+Expon.__doc__ = Expon.__doc__ % (_docs.exp_syn_doc, _docs.pneu_doc,)
+
+
+def _format_dual_exp_A(self, A):
+  A = parameter(A, sizes=self.varshape, allow_none=True, sharding=self.sharding)
+  if A is None:
+    A = (self.tau_decay / (self.tau_decay - self.tau_rise) *
+         bm.float_power(self.tau_rise / self.tau_decay, self.tau_rise / (self.tau_rise - self.tau_decay)))
+  return A
 
 
 class DualExpon(SynDyn):
   r"""Dual exponential synapse model.
 
-  **Model Descriptions**
-
-  The dual exponential synapse model [1]_, also named as *difference of two exponentials* model,
-  is given by:
-
-  .. math::
-
-    g_{\mathrm{syn}}(t)=g_{\mathrm{max}} \frac{\tau_{1} \tau_{2}}{
-        \tau_{1}-\tau_{2}}\left(\exp \left(-\frac{t-t_{0}}{\tau_{1}}\right)
-        -\exp \left(-\frac{t-t_{0}}{\tau_{2}}\right)\right)
-
-  where :math:`\tau_1` is the time constant of the decay phase, :math:`\tau_2`
-  is the time constant of the rise phase, :math:`t_0` is the time of the pre-synaptic
-  spike, :math:`g_{\mathrm{max}}` is the maximal conductance.
-
-  However, in practice, this formula is hard to implement. The equivalent solution is
-  two coupled linear differential equations [2]_:
-
-  .. math::
-
-      \begin{aligned}
-      &\frac{d g}{d t}=-\frac{g}{\tau_{\mathrm{decay}}}+h \\
-      &\frac{d h}{d t}=-\frac{h}{\tau_{\text {rise }}}+ \delta\left(t_{0}-t\right),
-      \end{aligned}
+  %s
 
   This module can be used with interface ``brainpy.dyn.ProjAlignPreMg2``, as shown in the following example:
 
@@ -267,11 +163,9 @@ class DualExpon(SynDyn):
 
         import matplotlib.pyplot as plt
 
-
         class DualExpSparseCOBA(bp.Projection):
             def __init__(self, pre, post, delay, prob, g_max, tau_decay, tau_rise, E):
                 super().__init__()
-
                 self.proj = bp.dyn.ProjAlignPreMg2(
                     pre=pre,
                     delay=delay,
@@ -280,7 +174,6 @@ class DualExpon(SynDyn):
                     out=bp.dyn.COBA(E=E),
                     post=post,
                 )
-
 
         class SimpleNet(bp.DynSysGroup):
             def __init__(self, syn_cls, E=0.):
@@ -317,15 +210,16 @@ class DualExpon(SynDyn):
         plt.title('Post V')
         plt.show()
 
-  .. [1] Sterratt, David, Bruce Graham, Andrew Gillies, and David Willshaw.
-         "The Synapse." Principles of Computational Modelling in Neuroscience.
-         Cambridge: Cambridge UP, 2011. 172-95. Print.
-  .. [2] Roth, A., & Van Rossum, M. C. W. (2009). Modeling Synapses. Computational
-         Modeling Methods for Neuroscientists.
+  See Also:
+    DualExponV2
+
+  .. note::
+
+     The implementation of this model can only be used in ``AlignPre`` projections.
+     One the contrary, to seek the ``AlignPost`` projection, please use ``DualExponV2``.
 
   Args:
-    tau_decay: float, ArrayArray, Callable. The time constant of the synaptic decay phase. [ms]
-    tau_rise: float, ArrayArray, Callable. The time constant of the synaptic rise phase. [ms]
+    %s
     %s
   """
 
@@ -341,6 +235,7 @@ class DualExpon(SynDyn):
       # synapse parameters
       tau_decay: Union[float, ArrayType, Callable] = 10.0,
       tau_rise: Union[float, ArrayType, Callable] = 1.,
+      A: Optional[Union[float, ArrayType, Callable]] = None,
   ):
     super().__init__(name=name,
                      mode=mode,
@@ -351,6 +246,8 @@ class DualExpon(SynDyn):
     # parameters
     self.tau_rise = self.init_param(tau_rise)
     self.tau_decay = self.init_param(tau_decay)
+    A = _format_dual_exp_A(self, A)
+    self.a = (self.tau_decay - self.tau_rise) / self.tau_rise / self.tau_decay * A
 
     # integrator
     self.integral = odeint(JointEq(self.dg, self.dh), method=method)
@@ -368,33 +265,28 @@ class DualExpon(SynDyn):
     return -g / self.tau_decay + h
 
   def update(self, x):
+    # x: the pre-synaptic spikes
+
     # update synaptic variables
     self.g.value, self.h.value = self.integral(self.g.value, self.h.value, share['t'], dt=share['dt'])
-    self.h += x
+    self.h += self.a * x
     return self.g.value
 
   def return_info(self):
     return self.g
 
 
-DualExpon.__doc__ = DualExpon.__doc__ % (pneu_doc,)
+DualExpon.__doc__ = DualExpon.__doc__ % (_docs.dual_exp_syn_doc, _docs.pneu_doc, _docs.dual_exp_args)
 
 
 class DualExponV2(SynDyn, AlignPost):
   r"""Dual exponential synapse model.
 
-  The dual exponential synapse model [1]_, also named as *difference of two exponentials* model,
-  is given by:
+  %s
 
-  .. math::
+  .. note::
 
-    g_{\mathrm{syn}}(t)=g_{\mathrm{max}} \frac{\tau_{1} \tau_{2}}{
-        \tau_{1}-\tau_{2}}\left(\exp \left(-\frac{t-t_{0}}{\tau_{1}}\right)
-        -\exp \left(-\frac{t-t_{0}}{\tau_{2}}\right)\right)
-
-  where :math:`\tau_1` is the time constant of the decay phase, :math:`\tau_2`
-  is the time constant of the rise phase, :math:`t_0` is the time of the pre-synaptic
-  spike, :math:`g_{\mathrm{max}}` is the maximal conductance.
+     Different from ``DualExpon``, this model can be used in both modes of ``AlignPre`` and ``AlignPost`` projections.
 
   This module can be used with interface ``brainpy.dyn.ProjAlignPreMg2``, as shown in the following example:
 
@@ -438,9 +330,6 @@ class DualExponV2(SynDyn, AlignPost):
                 current = self.post.sum_inputs(self.post.V)
                 return conductance, current, self.post.V
 
-
-
-
         indices = np.arange(1000)  # 100 ms, dt= 0.1 ms
         net = SimpleNet(DualExponV2SparseCOBAPost, E=0.)
         conductances, currents, potentials = bm.for_loop(net.step_run, indices, progress_bar=True)
@@ -456,7 +345,6 @@ class DualExponV2(SynDyn, AlignPost):
         plt.plot(ts, potentials)
         plt.title('Post V')
         plt.show()
-
 
   Moreover, it can also be used with interface ``ProjAlignPostMg2``:
 
@@ -475,17 +363,11 @@ class DualExponV2(SynDyn, AlignPost):
                     post=post,
                 )
 
-
-
-  .. [1] Sterratt, David, Bruce Graham, Andrew Gillies, and David Willshaw.
-         "The Synapse." Principles of Computational Modelling in Neuroscience.
-         Cambridge: Cambridge UP, 2011. 172-95. Print.
-  .. [2] Roth, A., & Van Rossum, M. C. W. (2009). Modeling Synapses. Computational
-         Modeling Methods for Neuroscientists.
+  See Also:
+    DualExpon
 
   Args:
-    tau_decay: float, ArrayArray, Callable. The time constant of the synaptic decay phase. [ms]
-    tau_rise: float, ArrayArray, Callable. The time constant of the synaptic rise phase. [ms]
+    %s
     %s
   """
 
@@ -501,6 +383,7 @@ class DualExponV2(SynDyn, AlignPost):
       # synapse parameters
       tau_decay: Union[float, ArrayType, Callable] = 10.0,
       tau_rise: Union[float, ArrayType, Callable] = 1.,
+      A: Optional[Union[float, ArrayType, Callable]] = None,
   ):
     super().__init__(name=name,
                      mode=mode,
@@ -511,7 +394,7 @@ class DualExponV2(SynDyn, AlignPost):
     # parameters
     self.tau_rise = self.init_param(tau_rise)
     self.tau_decay = self.init_param(tau_decay)
-    self.coeff = self.tau_rise * self.tau_decay / (self.tau_decay - self.tau_rise)
+    self.a = _format_dual_exp_A(self, A)
 
     # integrator
     self.integral = odeint(lambda g, t, tau: -g / tau, method=method)
@@ -527,7 +410,7 @@ class DualExponV2(SynDyn, AlignPost):
     self.g_decay.value = self.integral(self.g_decay.value, share['t'], self.tau_decay, share['dt'])
     if x is not None:
       self.add_current(x)
-    return self.coeff * (self.g_decay - self.g_rise)
+    return self.a * (self.g_decay - self.g_rise)
 
   def add_current(self, inp):
     self.g_rise += inp
@@ -535,32 +418,16 @@ class DualExponV2(SynDyn, AlignPost):
 
   def return_info(self):
     return ReturnInfo(self.varshape, self.sharding, self.mode,
-                      lambda shape: self.coeff * (self.g_decay - self.g_rise))
+                      lambda shape: self.a * (self.g_decay - self.g_rise))
 
 
-DualExponV2.__doc__ = DualExponV2.__doc__ % (pneu_doc,)
+DualExponV2.__doc__ = DualExponV2.__doc__ % (_docs.dual_exp_syn_doc, _docs.pneu_doc, _docs.dual_exp_args,)
 
 
-class Alpha(DualExpon):
+class Alpha(SynDyn):
   r"""Alpha synapse model.
 
-  **Model Descriptions**
-
-  The analytical expression of alpha synapse is given by:
-
-  .. math::
-
-      g_{syn}(t)= g_{max} \frac{t-t_{s}}{\tau} \exp \left(-\frac{t-t_{s}}{\tau}\right).
-
-  While, this equation is hard to implement. So, let's try to convert it into the
-  differential forms:
-
-  .. math::
-
-      \begin{aligned}
-      &\frac{d g}{d t}=-\frac{g}{\tau}+h \\
-      &\frac{d h}{d t}=-\frac{h}{\tau}+\delta\left(t_{0}-t\right)
-      \end{aligned}
+  %s
 
   This module can be used with interface ``brainpy.dyn.ProjAlignPreMg2``, as shown in the following example:
 
@@ -623,17 +490,9 @@ class Alpha(DualExpon):
         plt.show()
 
 
-
-
-
-  .. [1] Sterratt, David, Bruce Graham, Andrew Gillies, and David Willshaw.
-          "The Synapse." Principles of Computational Modelling in Neuroscience.
-          Cambridge: Cambridge UP, 2011. 172-95. Print.
-
   Args:
     %s
     tau_decay: float, ArrayType, Callable. The time constant [ms] of the synaptic decay phase.
-       The name of this synaptic projection.
   """
 
   def __init__(
@@ -649,9 +508,6 @@ class Alpha(DualExpon):
       tau_decay: Union[float, ArrayType, Callable] = 10.0,
   ):
     super().__init__(
-      tau_decay=tau_decay,
-      tau_rise=tau_decay,
-      method=method,
       name=name,
       mode=mode,
       size=size,
@@ -659,8 +515,35 @@ class Alpha(DualExpon):
       sharding=sharding
     )
 
+    # parameters
+    self.tau_decay = self.init_param(tau_decay)
 
-Alpha.__doc__ = Alpha.__doc__ % (pneu_doc,)
+    # integrator
+    self.integral = odeint(JointEq(self.dg, self.dh), method=method)
+
+    self.reset_state(self.mode)
+
+  def reset_state(self, batch_or_mode=None, **kwargs):
+    self.h = self.init_variable(bm.zeros, batch_or_mode)
+    self.g = self.init_variable(bm.zeros, batch_or_mode)
+
+  def dh(self, h, t):
+    return -h / self.tau_decay
+
+  def dg(self, g, t, h):
+    return -g / self.tau_decay + h / self.tau_decay
+
+  def update(self, x):
+    # update synaptic variables
+    self.g.value, self.h.value = self.integral(self.g.value, self.h.value, share['t'], dt=share['dt'])
+    self.h += x
+    return self.g.value
+
+  def return_info(self):
+    return self.g
+
+
+Alpha.__doc__ = Alpha.__doc__ % (_docs.alpha_syn_doc, _docs.pneu_doc,)
 
 
 class NMDA(SynDyn):
@@ -845,30 +728,13 @@ class NMDA(SynDyn):
     return self.g
 
 
-NMDA.__doc__ = NMDA.__doc__ % (pneu_doc,)
+NMDA.__doc__ = NMDA.__doc__ % (_docs.pneu_doc,)
 
 
 class STD(SynDyn):
   r"""Synaptic output with short-term depression.
 
-  This model filters the synaptic current by the following equation:
-
-  .. math::
-
-     I_{syn}^+(t) = I_{syn}^-(t) * x
-
-  where :math:`x` is the normalized variable between 0 and 1, and
-  :math:`I_{syn}^-(t)` and :math:`I_{syn}^+(t)` are the synaptic currents before
-  and after STD filtering.
-
-  Moreover, :math:`x` is updated according to the dynamics of:
-
-  .. math::
-
-     \frac{dx}{dt} = \frac{1-x}{\tau} - U * x * \delta(t-t_{spike})
-
-  where :math:`U` is the fraction of resources used per action potential,
-  :math:`\tau` is the time constant of recovery of the synaptic vesicles.
+  %s
 
   Args:
     tau: float, ArrayType, Callable. The time constant of recovery of the synaptic vesicles.
@@ -924,36 +790,13 @@ class STD(SynDyn):
     return self.x
 
 
-STD.__doc__ = STD.__doc__ % (pneu_doc,)
+STD.__doc__ = STD.__doc__ % (_docs.std_doc, _docs.pneu_doc,)
 
 
 class STP(SynDyn):
   r"""Synaptic output with short-term plasticity.
 
-  This model filters the synaptic currents according to two variables: :math:`u` and :math:`x`.
-
-  .. math::
-
-     I_{syn}^+(t) = I_{syn}^-(t) * x * u
-
-  where :math:`I_{syn}^-(t)` and :math:`I_{syn}^+(t)` are the synaptic currents before
-  and after STP filtering, :math:`x` denotes the fraction of resources that remain available
-  after neurotransmitter depletion, and :math:`u` represents the fraction of available
-  resources ready for use (release probability).
-
-  The dynamics of :math:`u` and :math:`x` are governed by
-
-  .. math::
-
-     \begin{aligned}
-    \frac{du}{dt} & = & -\frac{u}{\tau_f}+U(1-u^-)\delta(t-t_{sp}), \\
-    \frac{dx}{dt} & = & \frac{1-x}{\tau_d}-u^+x^-\delta(t-t_{sp}), \\
-    \tag{1}\end{aligned}
-
-  where :math:`t_{sp}` denotes the spike time and :math:`U` is the increment
-  of :math:`u` produced by a spike. :math:`u^-, x^-` are the corresponding
-  variables just before the arrival of the spike, and :math:`u^+`
-  refers to the moment just after the spike.
+  %s
 
   Args:
     tau_f: float, ArrayType, Callable. The time constant of short-term facilitation.
@@ -1030,4 +873,4 @@ class STP(SynDyn):
                       lambda shape: self.u * self.x)
 
 
-STP.__doc__ = STP.__doc__ % (pneu_doc,)
+STP.__doc__ = STP.__doc__ % (_docs.stp_doc, _docs.pneu_doc,)

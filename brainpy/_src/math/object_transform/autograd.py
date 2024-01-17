@@ -6,6 +6,7 @@ from typing import Union, Callable, Dict, Sequence, Any, Optional
 
 import jax
 import numpy as np
+
 if jax.__version__ >= '0.4.16':
   from jax.extend import linear_util
 else:
@@ -15,35 +16,27 @@ from jax import dtypes, vmap, numpy as jnp, core
 from jax._src.api import (_vjp, _jvp)
 from jax.api_util import argnums_partial
 from jax.interpreters import xla
-from jax.tree_util import (
-  tree_flatten, tree_unflatten,
-  tree_map, tree_transpose,
-  tree_structure
-)
+from jax.tree_util import (tree_flatten, tree_unflatten,
+                           tree_map, tree_transpose,
+                           tree_structure)
 from jax.util import safe_map
 
 from brainpy import tools, check
 from brainpy._src.math.ndarray import Array, _as_jax_array_
-from .tools import (
-  dynvar_deprecation,
-  node_deprecation,
-  get_stack_cache,
-  cache_stack,
-)
-from .base import (
-  BrainPyObject,
-  ObjectTransform
-)
-from .variables import (
-  Variable,
-  VariableStack,
-  current_transform_number,
-  new_transform,
-)
+from .tools import (dynvar_deprecation,
+                    node_deprecation,
+                    get_stack_cache,
+                    cache_stack)
+from .base import (BrainPyObject, ObjectTransform)
+from .variables import (Variable,
+                        VariableStack,
+                        current_transform_number,
+                        new_transform)
 
 __all__ = [
   'grad',  # gradient of scalar function
   'vector_grad',  # gradient of vector/matrix/...
+  'functional_vector_grad',
   'jacobian', 'jacrev', 'jacfwd',  # gradient of jacobian
   'hessian',  # gradient of hessian
 ]
@@ -466,7 +459,8 @@ def _std_basis(pytree):
   return _unravel_array_into_pytree(pytree, 1, flat_basis)
 
 
-_isleaf = lambda x: isinstance(x, Array)
+def _isleaf(x):
+  return isinstance(x, Array)
 
 
 def _jacrev(fun, argnums=0, holomorphic=False, allow_int=False, has_aux=False, return_value=False):
@@ -594,9 +588,6 @@ jacobian = jacrev
 
 def _jacfwd(fun, argnums=0, holomorphic=False, has_aux=False, return_value=False):
   _check_callable(fun)
-  if has_aux and jax.__version__ < '0.2.28':
-    raise NotImplementedError(f'"has_aux" only supported in jax>=0.2.28, but we detect '
-                              f'the current jax version is {jax.__version__}')
 
   @wraps(fun)
   def jacfun(*args, **kwargs):
@@ -769,7 +760,7 @@ def hessian(
                 return_value=return_value)
 
 
-def _vector_grad(func, argnums=0, return_value=False, has_aux=False):
+def functional_vector_grad(func, argnums=0, return_value=False, has_aux=False):
   _check_callable(func)
 
   @wraps(func)
@@ -866,7 +857,7 @@ def vector_grad(
 
   if func is None:
     return lambda f: GradientTransform(target=f,
-                                       transform=_vector_grad,
+                                       transform=functional_vector_grad,
                                        grad_vars=grad_vars,
                                        dyn_vars=dyn_vars,
                                        child_objs=child_objs,
@@ -875,7 +866,7 @@ def vector_grad(
                                        has_aux=False if has_aux is None else has_aux)
   else:
     return GradientTransform(target=func,
-                             transform=_vector_grad,
+                             transform=functional_vector_grad,
                              grad_vars=grad_vars,
                              dyn_vars=dyn_vars,
                              child_objs=child_objs,

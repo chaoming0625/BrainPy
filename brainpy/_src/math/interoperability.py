@@ -8,11 +8,20 @@ from .ndarray import Array
 
 __all__ = [
   'as_device_array', 'as_jax', 'as_ndarray', 'as_numpy', 'as_variable',
+  'from_numpy',
+
+  'is_bp_array'
 ]
 
 
 def _as_jax_array_(obj):
   return obj.value if isinstance(obj, Array) else obj
+
+
+def is_bp_array(x):
+  """Check if the input is a ``brainpy.math.Array``.
+  """
+  return isinstance(x, Array)
 
 
 def as_device_array(tensor, dtype=None):
@@ -93,3 +102,8 @@ def as_variable(tensor, dtype=None):
   """
   from .object_transform.variables import Variable
   return Variable(tensor, dtype=dtype)
+
+
+def from_numpy(arr, dtype=None):
+  return as_ndarray(arr, dtype=dtype)
+

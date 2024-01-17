@@ -25,6 +25,7 @@ from brainpy._src.math.object_transform.variables import (
 from brainpy._src.math.object_transform.autograd import (
   grad as grad,
   vector_grad as vector_grad,
+  functional_vector_grad as functional_vector_grad,
   jacobian as jacobian,
   jacrev as jacrev,
   jacfwd as jacfwd,
@@ -39,6 +40,7 @@ from brainpy._src.math.object_transform.controls import (
   ifelse as ifelse,
   for_loop as for_loop,
   while_loop as while_loop,
+  scan as scan,
 )
 
 
